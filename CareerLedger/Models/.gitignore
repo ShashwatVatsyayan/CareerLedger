@@ -1,0 +1,58 @@
+# Build generated files
+build/
+DerivedData/
+.build/
+
+# Xcode user data
+*.xcuserstate
+xcuserdata/
+*.xcuserdatad
+*.moved-aside
+
+# Xcode SCM
+*.xcscmblueprint
+
+# Swap files
+*.swp
+
+# macOS system files
+.DS_Store
+
+# IDE folders
+.idea/
+.vscode/
+
+# Indexing and intermediate files
+*.hmap
+
+# Archives and symbol files
+*.ipa
+*.dSYM
+
+# Swift Package Manager
+.swiftpm/xcode/package.xcworkspace/xcuserdata/
+.swiftpm/xcode/package.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+
+# Backup files
+*.orig
+*~
+
+# Environment files
+.env
+
+# Dependency managers
+Pods/
+Carthage/
+
+# Fastlane files
+fastlane/report.xml
+fastlane/test_output/
+fastlane/Preview.html
+fastlane/screenshots/
+
+# Package manager backup
+.package.resolved.backup
+
+# Playground user data
+Playground.playground.xcworkspace/xcuserdata/
+Playground.playground.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
