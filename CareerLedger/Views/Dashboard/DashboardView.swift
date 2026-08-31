@@ -50,14 +50,12 @@ struct DashboardView: View {
             VStack(spacing: 18) {
                 header
                 verificationSummary
-                academicsPreview
             }
             .frame(minWidth: 360, maxWidth: 430)
 
             VStack(spacing: 18) {
                 statsGrid(columns: 3)
-                recentActivity
-                recordPreview
+                ledgerReadinessCard
             }
         }
     }
@@ -67,9 +65,7 @@ struct DashboardView: View {
             header
             statsGrid(columns: 2)
             verificationSummary
-            recentActivity
-            academicsPreview
-            recordPreview
+            ledgerReadinessCard
         }
     }
 
@@ -88,11 +84,11 @@ struct DashboardView: View {
                             .font(.caption)
                             .fontWeight(.heavy)
                             .foregroundStyle(.blue)
-                        Text(student?.name ?? "Student")
+                        Text(student?.name ?? "Shashwat Vatsyayan")
                             .font(.title)
                             .fontWeight(.heavy)
                             .foregroundStyle(.primary)
-                        Text(student?.course ?? "Build your verified career record")
+                        Text(student?.course ?? "B.E. Computer Science")
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -120,7 +116,7 @@ struct DashboardView: View {
     private var verificationSummary: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
-                SectionHeader(title: "Verification Overview", subtitle: "\(projects.count + achievements.count + certificates.count + semesters.count) total records")
+                SectionHeader(title: "Verification Overview", subtitle: "\(projects.count + achievements.count + certificates.count + semesters.count) total database records")
                 HStack {
                     VerificationCount(label: "Issuer", value: issuerVerifiedCount, color: .green)
                     VerificationCount(label: "Source", value: sourceVerifiedCount, color: .purple)
@@ -131,63 +127,28 @@ struct DashboardView: View {
         }
     }
 
-    private var recentActivity: some View {
+    private var ledgerReadinessCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
-                SectionHeader(title: "Recent Activity", subtitle: "Latest records from SwiftData")
+                SectionHeader(title: "Portfolio Summary", subtitle: "Verifiable student credentials")
 
-                if achievements.isEmpty && projects.isEmpty && certificates.isEmpty {
-                    Text("Add records to see recent activity.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(Array(achievements.prefix(2))) { achievement in
-                        ActivityRow(icon: "trophy.fill", tint: .orange, title: achievement.title, subtitle: achievement.verificationStatus.displayName)
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(evidenceRecordCount) Evidence Links")
+                            .font(.headline)
+                        Text("Connected across projects, certifications, and awards")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
-                    ForEach(Array(projects.prefix(2))) { project in
-                        ActivityRow(icon: "folder.fill", tint: .purple, title: project.name, subtitle: project.technologies)
+                    Spacer()
+                    Button {
+                        showingPublicProfile = true
+                    } label: {
+                        Label("View Ledger", systemImage: "arrow.up.right")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
                     }
-                    ForEach(Array(certificates.prefix(1))) { certificate in
-                        ActivityRow(icon: "doc.text.fill", tint: .green, title: certificate.title, subtitle: certificate.verificationStatus.displayName)
-                    }
-                }
-            }
-        }
-    }
-
-    private var academicsPreview: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 12) {
-                SectionHeader(title: "Academic Progress", subtitle: semesters.isEmpty ? "No semesters yet" : "CGPA \(String(format: "%.2f", cgpa))")
-
-                ForEach(Array(semesters.prefix(4))) { semester in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Semester \(semester.semesterNumber)")
-                                .font(.headline)
-                            Text("\(semester.subjects.count) subjects")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Text(String(format: "%.1f", semester.sgpa))
-                            .font(.title3)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.blue)
-                    }
-                }
-            }
-        }
-    }
-
-    private var recordPreview: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 12) {
-                SectionHeader(title: "Career Records", subtitle: "Actual evidence, not only counts")
-                ForEach(Array(projects.prefix(2))) { project in
-                    ProjectMiniRow(project: project)
-                }
-                ForEach(Array(achievements.prefix(2))) { achievement in
-                    AchievementMiniRow(achievement: achievement)
+                    .buttonStyle(.borderedProminent)
                 }
             }
         }
@@ -240,72 +201,6 @@ private struct VerificationCount: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
-    }
-}
-
-private struct ProjectMiniRow: View {
-    let project: Project
-
-    var body: some View {
-        HStack {
-            Image(systemName: "folder.fill")
-                .foregroundStyle(.purple)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(project.name)
-                    .font(.headline)
-                Text(project.technologies)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            VerificationBadge(status: project.verificationStatus)
-        }
-    }
-}
-
-private struct AchievementMiniRow: View {
-    let achievement: Achievement
-
-    var body: some View {
-        HStack {
-            Image(systemName: "trophy.fill")
-                .foregroundStyle(.orange)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(achievement.title)
-                    .font(.headline)
-                Text(achievement.organization)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            VerificationBadge(status: achievement.verificationStatus)
-        }
-    }
-}
-
-private struct ActivityRow: View {
-    let icon: String
-    let tint: Color
-    let title: String
-    let subtitle: String
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .foregroundStyle(.white)
-                .frame(width: 34, height: 34)
-                .background(tint.gradient)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.headline)
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-        }
     }
 }
 
