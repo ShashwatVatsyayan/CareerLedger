@@ -36,7 +36,7 @@ struct AchievementsView: View {
                             action: { showingAddAchievement = true }
                         )
                     } else {
-                        LazyVStack(spacing: 14) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: 16)], spacing: 16) {
                             ForEach(filteredAchievements) { achievement in
                                 AchievementRecordCard(
                                     achievement: achievement,

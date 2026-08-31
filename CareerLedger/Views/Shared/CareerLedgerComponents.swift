@@ -2,6 +2,7 @@ import SwiftUI
 
 struct GlassCard<Content: View>: View {
     let content: Content
+    @State private var isHovered = false
 
     init(@ViewBuilder content: () -> Content) {
         self.content = content()
@@ -11,13 +12,38 @@ struct GlassCard<Content: View>: View {
         content
             .padding(18)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.regularMaterial)
-            .overlay {
+            .background {
                 RoundedRectangle(cornerRadius: 18)
-                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                    .fill(.regularMaterial)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 18)
+                            .strokeBorder(
+                                LinearGradient(
+                                    colors: isHovered
+                                        ? [Color.blue.opacity(0.4), Color.purple.opacity(0.2)]
+                                        : [Color.primary.opacity(0.09), Color.primary.opacity(0.03)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1
+                            )
+                    }
             }
             .clipShape(RoundedRectangle(cornerRadius: 18))
-            .shadow(color: .black.opacity(0.08), radius: 14, x: 0, y: 6)
+            .shadow(
+                color: isHovered ? Color.blue.opacity(0.12) : Color.black.opacity(0.06),
+                radius: isHovered ? 18 : 12,
+                x: 0,
+                y: isHovered ? 8 : 4
+            )
+            #if os(macOS)
+            .scaleEffect(isHovered ? 1.01 : 1.0)
+            .onHover { hovering in
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) {
+                    isHovered = hovering
+                }
+            }
+            #endif
     }
 }
 
@@ -30,6 +56,7 @@ struct SectionHeader: View {
             Text(title.uppercased())
                 .font(.caption)
                 .fontWeight(.heavy)
+                .tracking(1.2)
                 .foregroundStyle(.secondary)
             if let subtitle {
                 Text(subtitle)
@@ -46,13 +73,16 @@ struct VerificationBadge: View {
 
     var body: some View {
         Label(status.displayName.uppercased(), systemImage: icon)
-            .font(.caption2)
-            .fontWeight(.heavy)
+            .font(.system(size: 10, weight: .heavy, design: .rounded))
             .labelStyle(.titleAndIcon)
             .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(tint.opacity(0.14))
+            .padding(.vertical, 5)
+            .background(tint.opacity(0.12))
             .foregroundStyle(tint)
+            .overlay {
+                Capsule()
+                    .strokeBorder(tint.opacity(0.3), lineWidth: 0.8)
+            }
             .clipShape(Capsule())
             .animation(.spring(response: 0.3, dampingFraction: 0.78), value: status)
     }
@@ -190,11 +220,19 @@ struct AdaptivePage<Content: View>: View {
     var body: some View {
         ScrollView {
             content
-                .padding()
+                .padding(paddingAmount)
                 .frame(maxWidth: maxWidth)
                 .frame(maxWidth: .infinity)
         }
         .background(AppBackground())
+    }
+
+    private var paddingAmount: CGFloat {
+        #if os(macOS)
+        return 24
+        #else
+        return 16
+        #endif
     }
 }
 

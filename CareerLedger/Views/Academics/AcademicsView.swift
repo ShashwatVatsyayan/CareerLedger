@@ -28,7 +28,7 @@ struct AcademicsView: View {
                         )
                     } else {
                         academicSummary
-                        LazyVStack(spacing: 14) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 330), spacing: 16)], spacing: 16) {
                             ForEach(semesters) { semester in
                                 SemesterTimelineCard(
                                     semester: semester,

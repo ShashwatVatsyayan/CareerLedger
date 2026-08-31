@@ -31,18 +31,38 @@ enum AppSection: String, CaseIterable, Identifiable {
 
 struct MainTabView: View {
     @State private var selection: AppSection = .dashboard
+    @Query private var semesters: [Semester]
+    @Query private var projects: [Project]
+    @Query private var achievements: [Achievement]
+    @Query private var certificates: [Certificate]
 
     var body: some View {
         #if os(macOS)
         NavigationSplitView {
             List(AppSection.allCases, selection: $selection) { section in
-                Label(section.rawValue, systemImage: section.icon)
-                    .tag(section)
+                HStack {
+                    Label(section.rawValue, systemImage: section.icon)
+                    Spacer()
+                    if let badge = badgeCount(for: section) {
+                        Text("\(badge)")
+                            .font(.caption2)
+                            .fontWeight(.bold)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.blue.opacity(0.14))
+                            .foregroundStyle(.blue)
+                            .clipShape(Capsule())
+                    }
+                }
+                .tag(section)
             }
             .navigationTitle("Career Ledger")
+            .listStyle(.sidebar)
         } detail: {
             selectedView
+                .frame(minWidth: 550)
         }
+        .frame(minWidth: 880, minHeight: 580)
         #else
         TabView(selection: $selection) {
             ForEach(AppSection.allCases) { section in
@@ -54,6 +74,19 @@ struct MainTabView: View {
             }
         }
         #endif
+    }
+
+    private func badgeCount(for section: AppSection) -> Int? {
+        switch section {
+        case .academics:
+            return semesters.isEmpty ? nil : semesters.count
+        case .projects:
+            return projects.isEmpty ? nil : projects.count
+        case .achievements:
+            return achievements.isEmpty ? nil : achievements.count
+        default:
+            return nil
+        }
     }
 
     @ViewBuilder
