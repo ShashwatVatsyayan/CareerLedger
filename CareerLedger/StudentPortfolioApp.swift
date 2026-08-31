@@ -47,6 +47,7 @@ struct StudentPortfolioApp: App {
 
 private struct AppRootView: View {
     @AppStorage("isLoggedIn") private var isLoggedIn = true
+    @AppStorage("selectedTheme") private var selectedTheme = "system"
 
     var body: some View {
         Group {
@@ -55,6 +56,18 @@ private struct AppRootView: View {
             } else {
                 LoginView()
             }
+        }
+        .preferredColorScheme(colorScheme)
+    }
+
+    private var colorScheme: ColorScheme? {
+        switch selectedTheme {
+        case "light":
+            return .light
+        case "dark":
+            return .dark
+        default:
+            return nil
         }
     }
 }

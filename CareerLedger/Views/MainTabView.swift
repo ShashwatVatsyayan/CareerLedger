@@ -4,10 +4,10 @@ import SwiftUI
 enum AppSection: String, CaseIterable, Identifiable {
     case dashboard = "Dashboard"
     case academics = "Academics"
-    case achievements = "Achievements"
     case projects = "Projects"
-    case certificates = "Certificates"
+    case achievements = "Achievements"
     case profile = "Profile"
+    case more = "More"
 
     var id: String { rawValue }
 
@@ -17,14 +17,14 @@ enum AppSection: String, CaseIterable, Identifiable {
             return "house.fill"
         case .academics:
             return "graduationcap.fill"
-        case .achievements:
-            return "trophy.fill"
         case .projects:
             return "folder.fill"
-        case .certificates:
-            return "doc.text.fill"
+        case .achievements:
+            return "trophy.fill"
         case .profile:
-            return "person.fill"
+            return "person.crop.circle.fill"
+        case .more:
+            return "ellipsis.circle.fill"
         }
     }
 }
@@ -68,14 +68,14 @@ struct MainTabView: View {
             DashboardView()
         case .academics:
             AcademicsView()
-        case .achievements:
-            AchievementsView()
         case .projects:
             ProjectsView()
-        case .certificates:
-            CertificatesView()
+        case .achievements:
+            AchievementsView()
         case .profile:
             ProfileView()
+        case .more:
+            MoreView()
         }
     }
 }

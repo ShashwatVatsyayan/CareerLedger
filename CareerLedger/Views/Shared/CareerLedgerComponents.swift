@@ -14,10 +14,10 @@ struct GlassCard<Content: View>: View {
             .background(.regularMaterial)
             .overlay {
                 RoundedRectangle(cornerRadius: 18)
-                    .stroke(.white.opacity(0.28), lineWidth: 1)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
             }
             .clipShape(RoundedRectangle(cornerRadius: 18))
-            .shadow(color: .black.opacity(0.07), radius: 16, x: 0, y: 8)
+            .shadow(color: .black.opacity(0.08), radius: 14, x: 0, y: 6)
     }
 }
 
@@ -199,13 +199,21 @@ struct AdaptivePage<Content: View>: View {
 }
 
 struct AppBackground: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
         LinearGradient(
-            colors: [
-                platformBackground,
-                Color.blue.opacity(0.08),
-                Color.purple.opacity(0.05)
-            ],
+            colors: colorScheme == .dark
+                ? [
+                    Color(red: 0.08, green: 0.09, blue: 0.14),
+                    Color(red: 0.06, green: 0.07, blue: 0.12),
+                    Color(red: 0.04, green: 0.05, blue: 0.09)
+                ]
+                : [
+                    platformBackground,
+                    Color.blue.opacity(0.08),
+                    Color.purple.opacity(0.05)
+                ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
