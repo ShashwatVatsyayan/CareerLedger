@@ -121,7 +121,7 @@ struct MoreView: View {
     private var appearanceSection: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 14) {
-                SectionHeader(title: "Appearance", subtitle: "Theme & Dark Mode")
+                SectionHeader(title: "Settings & Appearance", subtitle: "Theme & Dark Mode Preferences")
 
                 Picker("Theme", selection: $selectedTheme) {
                     Label("System", systemImage: "circle.lefthalf.filled").tag("system")
