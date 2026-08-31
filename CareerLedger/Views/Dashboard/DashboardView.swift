@@ -8,6 +8,7 @@ struct DashboardView: View {
     @Query(sort: \Achievement.date, order: .reverse) private var achievements: [Achievement]
     @Query(sort: \Project.date, order: .reverse) private var projects: [Project]
     @Query(sort: \Certificate.issueDate, order: .reverse) private var certificates: [Certificate]
+    @State private var showingPublicProfile = false
 
     private var student: Student? {
         students.first
@@ -26,6 +27,18 @@ struct DashboardView: View {
                 }
             }
             .navigationTitle("Dashboard")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        showingPublicProfile = true
+                    } label: {
+                        Label("Public Profile", systemImage: "person.text.rectangle")
+                    }
+                }
+            }
+            .sheet(isPresented: $showingPublicProfile) {
+                PublicProfileView()
+            }
             .task {
                 PersistenceController.seedIfNeeded(modelContext: modelContext)
             }
@@ -61,25 +74,35 @@ struct DashboardView: View {
     }
 
     private var header: some View {
-        GlassCard {
-            HStack(spacing: 14) {
-                Image(systemName: "person.crop.circle.fill")
-                    .font(.system(size: 58))
-                    .foregroundStyle(.blue.gradient)
+        Button {
+            showingPublicProfile = true
+        } label: {
+            GlassCard {
+                HStack(spacing: 14) {
+                    Image(systemName: "person.crop.circle.fill")
+                        .font(.system(size: 58))
+                        .foregroundStyle(.blue.gradient)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("CAREER LEDGER")
-                        .font(.caption)
-                        .fontWeight(.heavy)
-                        .foregroundStyle(.blue)
-                    Text(student?.name ?? "Student")
-                        .font(.title)
-                        .fontWeight(.heavy)
-                    Text(student?.course ?? "Build your verified career record")
-                        .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("CAREER LEDGER")
+                            .font(.caption)
+                            .fontWeight(.heavy)
+                            .foregroundStyle(.blue)
+                        Text(student?.name ?? "Student")
+                            .font(.title)
+                            .fontWeight(.heavy)
+                            .foregroundStyle(.primary)
+                        Text(student?.course ?? "Build your verified career record")
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.subheadline)
+                        .foregroundStyle(.tertiary)
                 }
             }
         }
+        .buttonStyle(.plain)
         .transition(.move(edge: .top).combined(with: .opacity))
     }
 

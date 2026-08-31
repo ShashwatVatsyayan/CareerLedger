@@ -7,6 +7,7 @@ struct PublicProfileView: View {
     @Query(sort: \Project.date, order: .reverse) private var projects: [Project]
     @Query(sort: \Achievement.date, order: .reverse) private var achievements: [Achievement]
     @Query(sort: \Certificate.issueDate, order: .reverse) private var certificates: [Certificate]
+    @Environment(\.dismiss) private var dismiss
     @State private var generatedPDFURL: URL?
     @State private var showingShareSheet = false
     @State private var showingVerificationMessage = false
@@ -38,6 +39,20 @@ struct PublicProfileView: View {
             }
             .navigationTitle("Public Career Ledger")
             .inlineNavigationBarTitle()
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        generateAndSharePDF()
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                }
+            }
             .alert("Career Ledger Verification", isPresented: $showingVerificationMessage) {
                 Button("OK", role: .cancel) { }
             } message: {

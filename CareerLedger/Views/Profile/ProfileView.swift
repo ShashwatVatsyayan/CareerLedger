@@ -28,9 +28,10 @@ struct ProfileView: View {
             AdaptivePage {
                 LazyVStack(alignment: .leading, spacing: 20) {
                     CareerProfileHeader(student: student)
+                    skillsSection
+                    linksSection
                     verificationOverview
                     sharePanel
-                    actualRecords
                 }
             }
             .navigationTitle("Profile")
@@ -98,108 +99,38 @@ struct ProfileView: View {
     private var sharePanel: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 14) {
-                SectionHeader(title: "Career Ledger Profile", subtitle: student?.portfolioURL ?? "careerledger.app/u/demo")
-                HStack {
-                    Button {
-                        copyProfileLink()
-                    } label: {
-                        Label("Copy Link", systemImage: "doc.on.doc")
-                    }
-                    .buttonStyle(.bordered)
-
+                SectionHeader(title: "Share & Export", subtitle: "Generate verified public records and PDF exports")
+                
+                HStack(spacing: 12) {
                     Button {
                         showingPublicProfile = true
                     } label: {
-                        Label("Public Preview", systemImage: "person.text.rectangle")
+                        Label("Public Profile", systemImage: "person.text.rectangle.fill")
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+
+                    Button {
+                        showingShareSheet = true
+                    } label: {
+                        Label("Export PDF", systemImage: "doc.text.fill")
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
+                    .controlSize(.large)
                 }
 
                 Button {
-                    showingShareSheet = true
+                    copyProfileLink()
                 } label: {
-                    Label("Share Career Ledger", systemImage: "square.and.arrow.up")
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
+                    Label("Copy Public Link: \(student?.portfolioURL ?? "careerledger.app/shashwat")", systemImage: "link")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-            }
-        }
-    }
-
-    private var actualRecords: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .top, spacing: 18) {
-                VStack(spacing: 18) {
-                    educationSection
-                    skillsSection
-                    linksSection
-                }
-                VStack(spacing: 18) {
-                    projectsSection
-                    achievementsSection
-                    certificatesSection
-                }
-            }
-            LazyVStack(alignment: .leading, spacing: 18) {
-                educationSection
-                projectsSection
-                achievementsSection
-                certificatesSection
-                skillsSection
-                linksSection
-            }
-        }
-    }
-
-    private var educationSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "Education", subtitle: semesters.isEmpty ? "No academic records" : "CGPA \(String(format: "%.2f", PortfolioMetrics.cgpa(from: semesters)))")
-            ForEach(semesters) { semester in
-                SemesterTimelineCard(semester: semester, isExpanded: false, onToggle: { })
-            }
-        }
-    }
-
-    private var projectsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "Projects", subtitle: "\(projects.count) projects")
-            if projects.isEmpty {
-                Text("No projects added.")
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(projects) { project in
-                    ProjectRecordCard(project: project, isPublic: true)
-                }
-            }
-        }
-    }
-
-    private var achievementsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "Achievements", subtitle: "\(achievements.count) achievements")
-            if achievements.isEmpty {
-                Text("No achievements added.")
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(achievements) { achievement in
-                    AchievementRecordCard(achievement: achievement, isPublic: true)
-                }
-            }
-        }
-    }
-
-    private var certificatesSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "Certificates", subtitle: "\(certificates.count) certificates")
-            if certificates.isEmpty {
-                Text("No certificates added.")
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(certificates) { certificate in
-                    CertificateRecordCard(certificate: certificate, isPublic: true)
-                }
+                .buttonStyle(.plain)
             }
         }
     }
