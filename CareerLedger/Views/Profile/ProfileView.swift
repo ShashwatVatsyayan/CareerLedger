@@ -11,52 +11,54 @@ struct ProfileView: View {
     @Query(sort: \Project.date, order: .reverse) private var projects: [Project]
     @Query(sort: \Achievement.date, order: .reverse) private var achievements: [Achievement]
     @Query(sort: \Certificate.issueDate, order: .reverse) private var certificates: [Certificate]
+
     @State private var showingEditProfile = false
-    @State private var showingSettings = false
     @State private var showingPublicProfile = false
     @State private var showingShareSheet = false
     @State private var generatedPDFURL: URL?
-    @State private var pdfError: String?
     @State private var isGeneratingPDF = false
+    @State private var copyFeedbackMessage: String?
+    @State private var showingCopyAlert = false
 
     private var student: Student? {
         students.first
     }
 
+    private var cgpa: Double {
+        PortfolioMetrics.cgpa(from: semesters)
+    }
+
+    private var totalRecords: Int {
+        semesters.count + projects.count + achievements.count + certificates.count
+    }
+
+    private var totalEvidence: Int {
+        projects.filter { !$0.githubURL.isEmpty || !$0.demoURL.isEmpty }.count +
+        achievements.filter { !$0.evidenceURL.isEmpty || !$0.credentialID.isEmpty }.count +
+        certificates.filter { !$0.verificationURL.isEmpty || !$0.credentialID.isEmpty }.count
+    }
+
     var body: some View {
         NavigationStack {
-            AdaptivePage {
-                LazyVStack(alignment: .leading, spacing: 20) {
-                    CareerProfileHeader(student: student)
-                    skillsSection
-                    linksSection
-                    verificationOverview
-                    sharePanel
+            AdaptivePage(maxWidth: 720) {
+                VStack(spacing: 24) {
+                    minimalIdentityCard
+                    executiveSummaryCard
+                    skillsCard
+                    contactAndLinksCard
+                    quickActionsCard
                 }
+                .padding(.vertical, 8)
             }
             .navigationTitle("Profile")
+            .inlineNavigationBarTitle()
             .toolbar {
-                ToolbarItem {
+                ToolbarItem(placement: .primaryAction) {
                     Button {
-                        showingSettings = true
-                    } label: {
-                        Image(systemName: "gearshape.fill")
-                    }
-                }
-                ToolbarItem {
-                    Button("Edit") {
-                        if student == nil {
-                            let newStudent = Student(
-                                name: "Shashwat Vatsyayan",
-                                course: "B.E. Computer Science",
-                                university: "Chandigarh University",
-                                email: "student@example.com",
-                                bio: ""
-                            )
-                            modelContext.insert(newStudent)
-                            try? modelContext.save()
-                        }
                         showingEditProfile = true
+                    } label: {
+                        Text("Edit")
+                            .fontWeight(.semibold)
                     }
                 }
             }
@@ -65,134 +67,351 @@ struct ProfileView: View {
                     EditProfileView(student: student)
                 }
             }
-            .sheet(isPresented: $showingSettings) {
-                SettingsView()
-            }
             .sheet(isPresented: $showingPublicProfile) {
                 PublicProfileView()
             }
             .sheet(isPresented: $showingShareSheet) {
-                ShareCareerLedgerSheet(
-                    isGenerating: $isGeneratingPDF,
-                    pdfURL: $generatedPDFURL,
-                    errorMessage: $pdfError,
-                    generatePDF: generatePDF
-                )
-            }
-        }
-    }
-
-    private var verificationOverview: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 14) {
-                SectionHeader(title: "Verification Overview", subtitle: "\(totalRecords) total records")
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 130), spacing: 12)], spacing: 12) {
-                    ProfileStat(title: "Issuer Verified", value: issuerVerifiedCount, color: .green)
-                    ProfileStat(title: "Source Verified", value: sourceVerifiedCount, color: .purple)
-                    ProfileStat(title: "Evidence Provided", value: evidenceProvidedCount, color: .blue)
-                    ProfileStat(title: "Self Reported", value: selfReportedCount, color: .secondary)
+                if let generatedPDFURL {
+                    #if canImport(UIKit)
+                    ShareSheet(activityItems: [generatedPDFURL])
+                    #else
+                    VStack(spacing: 16) {
+                        Text("Career Ledger PDF")
+                            .font(.headline)
+                        ShareLink(item: generatedPDFURL) {
+                            Label("Save / Share PDF", systemImage: "square.and.arrow.up")
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                    .padding(30)
+                    #endif
                 }
             }
+            .alert("Copied to Clipboard", isPresented: $showingCopyAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(copyFeedbackMessage ?? "Link copied.")
+            }
         }
     }
 
-    private var sharePanel: some View {
+    // MARK: - 1. Minimal Identity Card
+    private var minimalIdentityCard: some View {
         GlassCard {
-            VStack(alignment: .leading, spacing: 14) {
-                SectionHeader(title: "Share & Export", subtitle: "Generate verified public records and PDF exports")
-                
+            VStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(colors: [.blue.opacity(0.2), .purple.opacity(0.15)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 96, height: 96)
+
+                    Image(systemName: "person.crop.circle.fill")
+                        .font(.system(size: 80))
+                        .foregroundStyle(LinearGradient(colors: [.blue, .indigo], startPoint: .topLeading, endPoint: .bottomTrailing))
+                }
+
+                VStack(spacing: 6) {
+                    HStack(spacing: 6) {
+                        Text(student?.name ?? "Shashwat Vatsyayan")
+                            .font(.title)
+                            .fontWeight(.heavy)
+
+                        Image(systemName: "checkmark.seal.fill")
+                            .foregroundStyle(.blue)
+                            .font(.title3)
+                    }
+
+                    Text(student?.course ?? "B.E. Computer Science")
+                        .font(.headline)
+                        .foregroundStyle(.primary.opacity(0.85))
+
+                    Text(student?.university ?? "Chandigarh University")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                if let bio = student?.bio, !bio.isEmpty {
+                    Text("“\(bio)”")
+                        .font(.subheadline)
+                        .italic()
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color.primary.opacity(0.03))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+
                 HStack(spacing: 12) {
                     Button {
                         showingPublicProfile = true
                     } label: {
-                        Label("Public Profile", systemImage: "person.text.rectangle.fill")
+                        Label("Public Ledger", systemImage: "arrow.up.right.square.fill")
+                            .font(.subheadline)
                             .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
+                    .controlSize(.regular)
 
                     Button {
-                        showingShareSheet = true
+                        generateAndExportPDF()
                     } label: {
-                        Label("Export PDF", systemImage: "doc.text.fill")
+                        Label(isGeneratingPDF ? "Generating..." : "Export CV", systemImage: "doc.text.fill")
+                            .font(.subheadline)
                             .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
-                    .controlSize(.large)
+                    .controlSize(.regular)
+                    .disabled(isGeneratingPDF)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+        }
+    }
+
+    // MARK: - 2. Executive Academic & Verification Summary
+    private var executiveSummaryCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("ACADEMIC & LEDGER FOOTPRINT")
+                    .font(.caption)
+                    .fontWeight(.heavy)
+                    .tracking(1.2)
+                    .foregroundStyle(.secondary)
+
+                HStack(spacing: 16) {
+                    summaryPill(
+                        title: "Current CGPA",
+                        value: cgpa > 0 ? String(format: "%.2f", cgpa) : "N/A",
+                        subtitle: "\(semesters.count) Semesters",
+                        tint: .blue
+                    )
+
+                    Divider()
+
+                    summaryPill(
+                        title: "Verified Proofs",
+                        value: "\(totalEvidence)",
+                        subtitle: "Evidence Artifacts",
+                        tint: .teal
+                    )
+
+                    Divider()
+
+                    summaryPill(
+                        title: "Ledger Records",
+                        value: "\(totalRecords)",
+                        subtitle: "SwiftData Items",
+                        tint: .purple
+                    )
+                }
+            }
+        }
+    }
+
+    private func summaryPill(title: String, value: String, subtitle: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2)
+                .fontWeight(.medium)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.title2)
+                .fontWeight(.heavy)
+                .foregroundStyle(tint)
+            Text(subtitle)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - 3. Skills Matrix
+    private var skillsCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("CORE COMPETENCIES")
+                        .font(.caption)
+                        .fontWeight(.heavy)
+                        .tracking(1.2)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text("\((student?.skills ?? []).count) Skills")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
 
-                Button {
-                    copyProfileLink()
-                } label: {
-                    Label("Copy Public Link: \(student?.portfolioURL ?? "careerledger.app/shashwat")", systemImage: "link")
-                        .font(.footnote)
+                if let skills = student?.skills, !skills.isEmpty {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 8)], alignment: .leading, spacing: 8) {
+                        ForEach(skills, id: \.self) { skill in
+                            HStack(spacing: 6) {
+                                Circle()
+                                    .fill(Color.blue)
+                                    .frame(width: 6, height: 6)
+                                Text(skill)
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.primary.opacity(0.05))
+                            .clipShape(Capsule())
+                        }
+                    }
+                } else {
+                    Text("No skills added yet. Tap Edit to add your technical skills.")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    // MARK: - 4. Contact & Professional Profiles
+    private var contactAndLinksCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("VERIFIED PROFILES & CONTACT")
+                    .font(.caption)
+                    .fontWeight(.heavy)
+                    .tracking(1.2)
+                    .foregroundStyle(.secondary)
+
+                VStack(spacing: 10) {
+                    profileLinkRow(
+                        title: "Email Address",
+                        value: student?.email ?? "student@example.com",
+                        icon: "envelope.fill",
+                        tint: .red,
+                        url: URL(string: "mailto:\(student?.email ?? "")")
+                    )
+
+                    Divider()
+
+                    profileLinkRow(
+                        title: "GitHub Profile",
+                        value: student?.githubURL ?? "Add GitHub",
+                        icon: "chevron.left.slash.chevron.right",
+                        tint: .primary,
+                        url: validURL(student?.githubURL ?? "")
+                    )
+
+                    Divider()
+
+                    profileLinkRow(
+                        title: "LinkedIn Network",
+                        value: student?.linkedinURL ?? "Add LinkedIn",
+                        icon: "link",
+                        tint: .blue,
+                        url: validURL(student?.linkedinURL ?? "")
+                    )
+
+                    Divider()
+
+                    profileLinkRow(
+                        title: "Portfolio Website",
+                        value: student?.portfolioURL ?? "Add Portfolio",
+                        icon: "globe",
+                        tint: .purple,
+                        url: validURL(student?.portfolioURL ?? "")
+                    )
+                }
+            }
+        }
+    }
+
+    private func profileLinkRow(title: String, value: String, icon: String, tint: Color, url: URL?) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.subheadline)
+                .foregroundStyle(.white)
+                .frame(width: 30, height: 30)
+                .background(tint.gradient)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Text(value.isEmpty ? "Not provided" : value)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+
+            Spacer()
+
+            if let url {
+                Link(destination: url) {
+                    Image(systemName: "arrow.up.right")
+                        .font(.caption)
+                        .foregroundStyle(.blue)
+                        .padding(6)
+                        .background(Color.blue.opacity(0.1))
+                        .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
             }
         }
     }
 
-    private var skillsSection: some View {
+    // MARK: - 5. Quick Actions
+    private var quickActionsCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
-                SectionHeader(title: "Skills", subtitle: "Evidence comes from linked records")
-                FlowLayout(items: student?.skills ?? [])
+                Text("PORTFOLIO DISPATCH")
+                    .font(.caption)
+                    .fontWeight(.heavy)
+                    .tracking(1.2)
+                    .foregroundStyle(.secondary)
+
+                HStack(spacing: 12) {
+                    Button {
+                        copyProfileShareLink()
+                    } label: {
+                        HStack {
+                            Image(systemName: "doc.on.doc.fill")
+                            Text("Copy Public Link")
+                        }
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.regular)
+
+                    Button {
+                        showingPublicProfile = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "eye.fill")
+                            Text("Recruiter View")
+                        }
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.regular)
+                }
             }
         }
     }
 
-    private var linksSection: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 12) {
-                SectionHeader(title: "Professional Links")
-                LinkLine(title: "GitHub", value: student?.githubURL ?? "", icon: "chevron.left.slash.chevron.right")
-                LinkLine(title: "LinkedIn", value: student?.linkedinURL ?? "", icon: "link")
-                LinkLine(title: "Portfolio", value: student?.portfolioURL ?? "", icon: "globe")
-            }
-        }
-    }
-
-    private var totalRecords: Int {
-        projects.count + achievements.count + certificates.count + semesters.count
-    }
-
-    private var issuerVerifiedCount: Int {
-        achievements.filter { $0.verificationStatus == .issuerVerified }.count +
-        certificates.filter { $0.verificationStatus == .issuerVerified }.count +
-        projects.filter { $0.verificationStatus == .issuerVerified }.count
-    }
-
-    private var sourceVerifiedCount: Int {
-        achievements.filter { $0.verificationStatus == .sourceVerified }.count +
-        certificates.filter { $0.verificationStatus == .sourceVerified }.count +
-        projects.filter { $0.verificationStatus == .sourceVerified }.count
-    }
-
-    private var evidenceProvidedCount: Int {
-        achievements.filter { $0.verificationStatus == .evidenceProvided }.count +
-        certificates.filter { $0.verificationStatus == .evidenceProvided }.count +
-        projects.filter { $0.verificationStatus == .evidenceProvided }.count
-    }
-
-    private var selfReportedCount: Int {
-        achievements.filter { $0.verificationStatus == .selfReported }.count +
-        certificates.filter { $0.verificationStatus == .selfReported }.count +
-        projects.filter { $0.verificationStatus == .selfReported }.count
-    }
-
-    private func copyProfileLink() {
+    private func copyProfileShareLink() {
+        let link = student?.portfolioURL.isEmpty == false ? student!.portfolioURL : "https://careerledger.app/\(student?.name.lowercased().replacingOccurrences(of: " ", with: "-") ?? "student")"
         #if canImport(UIKit)
-        UIPasteboard.general.string = student?.portfolioURL ?? "https://careerledger.example.com/demo"
+        UIPasteboard.general.string = link
         #endif
+        copyFeedbackMessage = "Public link copied to clipboard:\n\(link)"
+        showingCopyAlert = true
     }
 
-    private func generatePDF() {
+    private func generateAndExportPDF() {
         isGeneratingPDF = true
-        pdfError = nil
-
         do {
             generatedPDFURL = try PDFService.generateCareerLedgerPDF(
                 student: student,
@@ -201,194 +420,12 @@ struct ProfileView: View {
                 achievements: achievements,
                 certificates: certificates
             )
+            showingShareSheet = true
         } catch {
-            pdfError = "Could not generate the PDF. Please try again."
+            copyFeedbackMessage = "Could not generate PDF: \(error.localizedDescription)"
+            showingCopyAlert = true
         }
-
         isGeneratingPDF = false
-    }
-}
-
-struct CareerProfileHeader: View {
-    let student: Student?
-
-    var body: some View {
-        GlassCard {
-            HStack(alignment: .top, spacing: 18) {
-                Image(systemName: "person.crop.circle.fill")
-                    .font(.system(size: 84))
-                    .foregroundStyle(.blue.gradient)
-                    .symbolEffect(.bounce, value: student?.name ?? "")
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("CAREER LEDGER")
-                        .font(.caption)
-                        .fontWeight(.heavy)
-                        .foregroundStyle(.blue)
-                    Text(student?.name ?? "Student")
-                        .font(.largeTitle)
-                        .fontWeight(.heavy)
-                    Text(student?.course ?? "Add your degree")
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
-                    Text(student?.university ?? "Add your university")
-                        .font(.headline)
-                    Text(student?.bio.isEmpty == false ? student?.bio ?? "" : "Add a short professional bio.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-        }
-    }
-}
-
-private struct ProfileStat: View {
-    let title: String
-    let value: Int
-    let color: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text("\(value)")
-                .font(.title)
-                .fontWeight(.heavy)
-                .foregroundStyle(color)
-            Text(title)
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(.secondary)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.secondary.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-}
-
-private struct LinkLine: View {
-    let title: String
-    let value: String
-    let icon: String
-
-    var body: some View {
-        if let url = validURL(value) {
-            Link(destination: url) {
-                HStack {
-                    Label(title, systemImage: icon)
-                    Spacer()
-                    Text(value)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption2)
-                }
-            }
-            .buttonStyle(.plain)
-        }
-    }
-}
-
-private struct ShareCareerLedgerSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @Binding var isGenerating: Bool
-    @Binding var pdfURL: URL?
-    @Binding var errorMessage: String?
-    let generatePDF: () -> Void
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 18) {
-                Image(systemName: "doc.richtext.fill")
-                    .font(.system(size: 54))
-                    .foregroundStyle(.blue.gradient)
-
-                VStack(spacing: 8) {
-                    Text("Share Career Ledger")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    Text("Your complete career profile is ready to share.")
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(["Education", "Projects", "Achievements", "Certificates", "Skills", "Evidence", "Verification Status", "Professional Links"], id: \.self) { item in
-                        Label(item, systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-                .background(Color.secondary.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-
-                if isGenerating {
-                    ProgressView("Generating PDF")
-                }
-
-                if let errorMessage {
-                    Text(errorMessage)
-                        .foregroundStyle(.red)
-                        .font(.footnote)
-                }
-
-                Button {
-                    generatePDF()
-                } label: {
-                    Label("Generate PDF", systemImage: "doc.badge.plus")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(isGenerating)
-
-                if let pdfURL {
-                    ShareLink(item: pdfURL) {
-                        Label("Share PDF", systemImage: "square.and.arrow.up")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-                }
-
-                Button("Cancel") {
-                    dismiss()
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(28)
-            .frame(maxWidth: 460)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(AppBackground())
-            .navigationTitle("Share")
-            .inlineNavigationBarTitle()
-        }
-    }
-}
-
-private struct FlowLayout: View {
-    let items: [String]
-
-    var body: some View {
-        if items.isEmpty {
-            Text("No skills added.")
-                .foregroundStyle(.secondary)
-        } else {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: 8)], alignment: .leading, spacing: 8) {
-                ForEach(items, id: \.self) { item in
-                    Text(item)
-                        .font(.callout)
-                        .fontWeight(.semibold)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(Color.blue.opacity(0.12))
-                        .clipShape(Capsule())
-                }
-            }
-        }
     }
 }
 
