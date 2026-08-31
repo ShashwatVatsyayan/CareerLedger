@@ -4,20 +4,33 @@ import SwiftUI
 @main
 struct StudentPortfolioApp: App {
     @AppStorage("selectedTheme") private var selectedTheme = "system"
+    let container: ModelContainer
+
+    init() {
+        do {
+            let schema = Schema([
+                Student.self,
+                Achievement.self,
+                Project.self,
+                Certificate.self,
+                Semester.self,
+                Subject.self
+            ])
+            let config = ModelConfiguration(schema: schema)
+            let container = try ModelContainer(for: schema, configurations: [config])
+            PersistenceController.seedIfNeeded(modelContext: container.mainContext)
+            self.container = container
+        } catch {
+            fatalError("Failed to initialize SwiftData ModelContainer: \(error)")
+        }
+    }
 
     var body: some Scene {
         WindowGroup {
             AppRootView()
                 .preferredColorScheme(colorScheme)
         }
-        .modelContainer(for: [
-            Student.self,
-            Achievement.self,
-            Project.self,
-            Certificate.self,
-            Semester.self,
-            Subject.self
-        ])
+        .modelContainer(container)
     }
 
     private var colorScheme: ColorScheme? {
@@ -33,13 +46,7 @@ struct StudentPortfolioApp: App {
 }
 
 private struct AppRootView: View {
-    @Environment(\.modelContext) private var modelContext
-    @AppStorage("isLoggedIn") private var isLoggedIn = false
-    @Query private var students: [Student]
-    @Query private var achievements: [Achievement]
-    @Query private var projects: [Project]
-    @Query private var certificates: [Certificate]
-    @Query private var semesters: [Semester]
+    @AppStorage("isLoggedIn") private var isLoggedIn = true
 
     var body: some View {
         Group {
@@ -48,16 +55,6 @@ private struct AppRootView: View {
             } else {
                 LoginView()
             }
-        }
-        .task {
-            PersistenceController.seedIfNeeded(
-                modelContext: modelContext,
-                students: students,
-                achievements: achievements,
-                projects: projects,
-                certificates: certificates,
-                semesters: semesters
-            )
         }
     }
 }

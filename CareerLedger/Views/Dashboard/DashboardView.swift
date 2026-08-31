@@ -2,6 +2,7 @@ import SwiftData
 import SwiftUI
 
 struct DashboardView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query private var students: [Student]
     @Query(sort: \Semester.semesterNumber) private var semesters: [Semester]
     @Query(sort: \Achievement.date, order: .reverse) private var achievements: [Achievement]
@@ -25,6 +26,9 @@ struct DashboardView: View {
                 }
             }
             .navigationTitle("Dashboard")
+            .task {
+                PersistenceController.seedIfNeeded(modelContext: modelContext)
+            }
         }
     }
 
