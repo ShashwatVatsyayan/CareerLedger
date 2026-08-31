@@ -1,35 +1,39 @@
 import Foundation
+import SwiftData
 
-struct Subject: Identifiable {
-    let id = UUID()
+@Model
+final class Subject {
+    @Attribute(.unique) var id: UUID
     var name: String
     var grade: String
+    var semester: Semester?
+
+    init(id: UUID = UUID(), name: String, grade: String) {
+        self.id = id
+        self.name = name
+        self.grade = grade
+    }
 }
 
-struct Semester: Identifiable {
-    let id = UUID()
-    var number: Int
+@Model
+final class Semester {
+    @Attribute(.unique) var id: UUID
+    var semesterNumber: Int
     var sgpa: Double
-    var subjects: [Subject]
-}
+    @Relationship(deleteRule: .cascade, inverse: \Subject.semester) var subjects: [Subject]
+    var createdAt: Date
 
-let sampleSemesters = [
-    Semester(
-        number: 1,
-        sgpa: 8.2,
-        subjects: [
-            Subject(name: "Programming", grade: "A"),
-            Subject(name: "Mathematics", grade: "A+"),
-            Subject(name: "Physics", grade: "B+")
-        ]
-    ),
-    Semester(
-        number: 2,
-        sgpa: 8.6,
-        subjects: [
-            Subject(name: "Data Structures", grade: "A+"),
-            Subject(name: "Database Systems", grade: "A"),
-            Subject(name: "English", grade: "A")
-        ]
-    )
-]
+    init(
+        id: UUID = UUID(),
+        semesterNumber: Int,
+        sgpa: Double,
+        subjects: [Subject] = [],
+        createdAt: Date = Date()
+    ) {
+        self.id = id
+        self.semesterNumber = semesterNumber
+        self.sgpa = sgpa
+        self.subjects = subjects
+        self.createdAt = createdAt
+    }
+}

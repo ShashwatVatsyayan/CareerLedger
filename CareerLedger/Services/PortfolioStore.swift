@@ -1,14 +1,7 @@
 import Foundation
-import Combine
 
-final class PortfolioStore: ObservableObject {
-    @Published var student = sampleStudent
-    @Published var semesters = sampleSemesters
-    @Published var achievements = sampleAchievements
-    @Published var projects = sampleProjects
-    @Published var certificates = sampleCertificates
-
-    var cgpa: Double {
+enum PortfolioMetrics {
+    static func cgpa(from semesters: [Semester]) -> Double {
         guard !semesters.isEmpty else {
             return 0
         }
@@ -17,4 +10,3 @@ final class PortfolioStore: ObservableObject {
         return total / Double(semesters.count)
     }
 }
-

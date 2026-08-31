@@ -1,39 +1,56 @@
+import SwiftData
 import SwiftUI
 
 struct ProjectsView: View {
-    @State private var projects = sampleProjects
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Project.date, order: .reverse) private var projects: [Project]
     @State private var showingAddProject = false
     @State private var editingProject: Project?
+    @State private var searchText = ""
+    @State private var selectedStatus: VerificationStatus?
+
+    private var filteredProjects: [Project] {
+        projects.filter { project in
+            let matchesSearch = searchText.isEmpty ||
+            project.name.localizedCaseInsensitiveContains(searchText) ||
+            project.projectDescription.localizedCaseInsensitiveContains(searchText) ||
+            project.technologies.localizedCaseInsensitiveContains(searchText)
+            let matchesStatus = selectedStatus == nil || project.verificationStatus == selectedStatus
+            return matchesSearch && matchesStatus
+        }
+    }
 
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(projects) { project in
-                    ProjectCardView(
-                        project: project,
-                        onEdit: { editingProject = project },
-                        onDelete: { deleteProject(project) }
-                    )
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-                    .swipeActions(edge: .trailing) {
-                        Button(role: .destructive) {
-                            deleteProject(project)
-                        } label: {
-                            Label("Delete", systemImage: "trash")
+            AdaptivePage {
+                LazyVStack(alignment: .leading, spacing: 18) {
+                    SectionHeader(title: "Projects", subtitle: "\(projects.count) stored project records")
+                    filterBar
+
+                    if filteredProjects.isEmpty {
+                        PremiumEmptyState(
+                            title: "No Projects Yet",
+                            message: "Add projects with descriptions, technologies, GitHub links, demos, and evidence.",
+                            systemImage: "folder.badge.plus",
+                            actionTitle: "Add Project",
+                            action: { showingAddProject = true }
+                        )
+                    } else {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: 16)], spacing: 16) {
+                            ForEach(filteredProjects) { project in
+                                ProjectRecordCard(
+                                    project: project,
+                                    onEdit: { editingProject = project },
+                                    onDelete: { deleteProject(project) }
+                                )
+                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                            }
                         }
-                        Button {
-                            editingProject = project
-                        } label: {
-                            Label("Edit", systemImage: "pencil")
-                        }
-                        .tint(.blue)
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(Color.purple.opacity(0.06))
-            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: projects.count)
+            .searchable(text: $searchText, prompt: "Search projects")
+            .animation(.spring(response: 0.35, dampingFraction: 0.86), value: filteredProjects.count)
             .navigationTitle("Projects")
             .toolbar {
                 ToolbarItem {
@@ -42,86 +59,135 @@ struct ProjectsView: View {
                     } label: {
                         Image(systemName: "plus")
                     }
+                    .keyboardShortcut("n", modifiers: [.command])
                 }
             }
             .sheet(isPresented: $showingAddProject) {
-                AddProjectView { project in
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                        projects.append(project)
-                    }
-                }
+                AddProjectView()
             }
             .sheet(item: $editingProject) { project in
-                AddProjectView(project: project) { updatedProject in
-                    updateProject(project, with: updatedProject)
-                }
+                AddProjectView(project: project)
             }
         }
     }
 
-    private func updateProject(_ oldProject: Project, with updatedProject: Project) {
-        guard let index = projects.firstIndex(where: { $0.id == oldProject.id }) else {
-            return
-        }
-
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-            projects[index] = updatedProject
+    private var filterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                FilterChip(title: "All", isSelected: selectedStatus == nil) {
+                    selectedStatus = nil
+                }
+                ForEach(VerificationStatus.allCases) { status in
+                    FilterChip(title: status.displayName, isSelected: selectedStatus == status) {
+                        selectedStatus = status
+                    }
+                }
+            }
         }
     }
 
     private func deleteProject(_ project: Project) {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-            projects.removeAll { $0.id == project.id }
+            modelContext.delete(project)
         }
     }
 }
 
-private struct ProjectCardView: View {
+struct ProjectRecordCard: View {
     let project: Project
-    let onEdit: () -> Void
-    let onDelete: () -> Void
+    var isPublic: Bool = false
+    var onEdit: (() -> Void)?
+    var onDelete: (() -> Void)?
 
     var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "folder.fill")
-                .foregroundStyle(.white)
-                .frame(width: 44, height: 44)
-                .background(Color.purple.gradient)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+        GlassCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "folder.fill")
+                        .foregroundStyle(.white)
+                        .frame(width: 42, height: 42)
+                        .background(Color.purple.gradient)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text(project.name)
-                    .font(.headline)
-                Text(project.description)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(project.name)
+                            .font(.title3)
+                            .fontWeight(.bold)
+                        Text(project.technologies.replacingOccurrences(of: ",", with: " •"))
+                            .font(.subheadline)
+                            .foregroundStyle(.purple)
+                        VerificationBadge(status: project.verificationStatus)
+                    }
+
+                    Spacer()
+
+                    if !isPublic {
+                        Menu {
+                            Button("Edit", systemImage: "pencil") {
+                                onEdit?()
+                            }
+                            Button("Delete", systemImage: "trash", role: .destructive) {
+                                onDelete?()
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .frame(width: 32, height: 32)
+                        }
+                    }
+                }
+
+                Text(project.projectDescription.isEmpty ? "No description added." : project.projectDescription)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                Text(project.technologies)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.purple)
-            }
+                    .fixedSize(horizontal: false, vertical: true)
 
-            Spacer()
+                EvidenceSection(items: evidenceItems)
 
-            Button(action: onEdit) {
-                Image(systemName: "pencil")
-                    .frame(width: 32, height: 32)
+                if !isPublic {
+                    Button {
+                        onEdit?()
+                    } label: {
+                        Label("View Project", systemImage: "arrow.right.circle")
+                    }
+                    .buttonStyle(.bordered)
+                }
             }
-            .buttonStyle(.borderless)
-
-            Button(role: .destructive, action: onDelete) {
-                Image(systemName: "trash")
-                    .frame(width: 32, height: 32)
-            }
-            .buttonStyle(.borderless)
         }
-        .padding(14)
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+
+    private var evidenceItems: [EvidenceItem] {
+        var items: [EvidenceItem] = []
+        if let url = validURL(project.githubURL) {
+            items.append(EvidenceItem(title: "GitHub Repository", detail: project.githubURL, url: url, icon: "chevron.left.slash.chevron.right"))
+        }
+        if let url = validURL(project.demoURL) {
+            items.append(EvidenceItem(title: "Demo Available", detail: project.demoURL, url: url, icon: "play.circle.fill"))
+        }
+        return items
+    }
+}
+
+struct FilterChip: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(isSelected ? Color.blue.opacity(0.18) : Color.secondary.opacity(0.10))
+                .foregroundStyle(isSelected ? .blue : .primary)
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }
 
 #Preview {
     ProjectsView()
+        .modelContainer(for: [Project.self], inMemory: true)
 }

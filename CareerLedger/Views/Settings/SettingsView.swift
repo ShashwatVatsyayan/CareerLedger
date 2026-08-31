@@ -1,9 +1,11 @@
 import SwiftUI
+import SwiftData
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("isLoggedIn") private var isLoggedIn = false
     @AppStorage("selectedTheme") private var selectedTheme = "system"
+    @Query private var students: [Student]
 
     var body: some View {
         NavigationStack {
@@ -18,7 +20,7 @@ struct SettingsView: View {
                 }
 
                 Section("Account") {
-                    LabeledContent("Signed in as", value: sampleStudent.email)
+                    LabeledContent("Signed in as", value: students.first?.email ?? "student@example.com")
 
                     Button(role: .destructive) {
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {

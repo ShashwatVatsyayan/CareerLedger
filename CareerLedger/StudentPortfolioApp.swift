@@ -1,23 +1,23 @@
+import SwiftData
 import SwiftUI
 
 @main
 struct StudentPortfolioApp: App {
-    @AppStorage("isLoggedIn") private var isLoggedIn = false
     @AppStorage("selectedTheme") private var selectedTheme = "system"
-    @StateObject private var store = PortfolioStore()
 
     var body: some Scene {
         WindowGroup {
-            Group {
-                if isLoggedIn {
-                    MainTabView()
-                        .environmentObject(store)
-                } else {
-                    LoginView()
-                }
-            }
-            .preferredColorScheme(colorScheme)
+            AppRootView()
+                .preferredColorScheme(colorScheme)
         }
+        .modelContainer(for: [
+            Student.self,
+            Achievement.self,
+            Project.self,
+            Certificate.self,
+            Semester.self,
+            Subject.self
+        ])
     }
 
     private var colorScheme: ColorScheme? {
@@ -28,6 +28,36 @@ struct StudentPortfolioApp: App {
             return .dark
         default:
             return nil
+        }
+    }
+}
+
+private struct AppRootView: View {
+    @Environment(\.modelContext) private var modelContext
+    @AppStorage("isLoggedIn") private var isLoggedIn = false
+    @Query private var students: [Student]
+    @Query private var achievements: [Achievement]
+    @Query private var projects: [Project]
+    @Query private var certificates: [Certificate]
+    @Query private var semesters: [Semester]
+
+    var body: some View {
+        Group {
+            if isLoggedIn {
+                MainTabView()
+            } else {
+                LoginView()
+            }
+        }
+        .task {
+            PersistenceController.seedIfNeeded(
+                modelContext: modelContext,
+                students: students,
+                achievements: achievements,
+                projects: projects,
+                certificates: certificates,
+                semesters: semesters
+            )
         }
     }
 }

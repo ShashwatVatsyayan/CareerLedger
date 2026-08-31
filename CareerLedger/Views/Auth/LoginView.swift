@@ -43,7 +43,7 @@ struct LoginView: View {
                     .controlSize(.large)
 
                     Button {
-                        email = sampleStudent.email
+                        email = "student@example.com"
                         password = "password"
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
                             isLoggedIn = true

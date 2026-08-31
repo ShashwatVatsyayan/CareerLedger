@@ -1,41 +1,48 @@
+import SwiftData
 import SwiftUI
 
 struct AcademicsView: View {
-    @State private var semesters = sampleSemesters
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Semester.semesterNumber) private var semesters: [Semester]
     @State private var showingAddSemester = false
     @State private var editingSemester: Semester?
+    @State private var expandedSemesterIDs: Set<UUID> = []
+
+    private var cgpa: Double {
+        PortfolioMetrics.cgpa(from: semesters)
+    }
 
     var body: some View {
         NavigationStack {
-            List {
-                Section("Academic Performance") {
-                    ForEach(semesters) { semester in
-                        SemesterCardView(
-                            semester: semester,
-                            onEdit: { editingSemester = semester },
-                            onDelete: { deleteSemester(semester) }
+            AdaptivePage {
+                LazyVStack(alignment: .leading, spacing: 18) {
+                    SectionHeader(title: "Academics", subtitle: semesters.isEmpty ? "No academic records" : "Overall CGPA \(String(format: "%.2f", cgpa))")
+
+                    if semesters.isEmpty {
+                        PremiumEmptyState(
+                            title: "No Academic Records",
+                            message: "Add semester SGPA and subjects to build your academic timeline.",
+                            systemImage: "graduationcap",
+                            actionTitle: "Add Semester",
+                            action: { showingAddSemester = true }
                         )
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) {
-                                deleteSemester(semester)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
+                    } else {
+                        academicSummary
+                        LazyVStack(spacing: 14) {
+                            ForEach(semesters) { semester in
+                                SemesterTimelineCard(
+                                    semester: semester,
+                                    isExpanded: expandedSemesterIDs.contains(semester.id),
+                                    onToggle: { toggle(semester) },
+                                    onEdit: { editingSemester = semester },
+                                    onDelete: { deleteSemester(semester) }
+                                )
                             }
-                            Button {
-                                editingSemester = semester
-                            } label: {
-                                Label("Edit", systemImage: "pencil")
-                            }
-                            .tint(.blue)
                         }
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(Color.blue.opacity(0.06))
-            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: semesters.count)
+            .animation(.spring(response: 0.35, dampingFraction: 0.86), value: semesters.count)
             .navigationTitle("Academics")
             .toolbar {
                 ToolbarItem {
@@ -44,60 +51,80 @@ struct AcademicsView: View {
                     } label: {
                         Image(systemName: "plus")
                     }
+                    .keyboardShortcut("n", modifiers: [.command])
                 }
             }
             .sheet(isPresented: $showingAddSemester) {
-                AddSemesterView { newSemester in
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                        semesters.append(newSemester)
-                    }
-                }
+                AddSemesterView()
             }
             .sheet(item: $editingSemester) { semester in
-                AddSemesterView(semester: semester) { updatedSemester in
-                    updateSemester(semester, with: updatedSemester)
+                AddSemesterView(semester: semester)
+            }
+        }
+    }
+
+    private var academicSummary: some View {
+        GlassCard {
+            HStack {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Overall CGPA")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(String(format: "%.2f", cgpa))
+                        .font(.system(.largeTitle, design: .rounded))
+                        .fontWeight(.heavy)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 6) {
+                    Text("\(semesters.count)")
+                        .font(.title)
+                        .fontWeight(.bold)
+                    Text("Semesters")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
     }
 
-    private func updateSemester(_ oldSemester: Semester, with updatedSemester: Semester) {
-        guard let index = semesters.firstIndex(where: { $0.id == oldSemester.id }) else {
-            return
-        }
-
+    private func toggle(_ semester: Semester) {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-            semesters[index] = updatedSemester
+            if expandedSemesterIDs.contains(semester.id) {
+                expandedSemesterIDs.remove(semester.id)
+            } else {
+                expandedSemesterIDs.insert(semester.id)
+            }
         }
     }
 
     private func deleteSemester(_ semester: Semester) {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-            semesters.removeAll { $0.id == semester.id }
+            modelContext.delete(semester)
         }
     }
 }
 
-private struct SemesterCardView: View {
+struct SemesterTimelineCard: View {
     let semester: Semester
-    let onEdit: () -> Void
-    let onDelete: () -> Void
+    let isExpanded: Bool
+    let onToggle: () -> Void
+    var onEdit: (() -> Void)?
+    var onDelete: (() -> Void)?
 
     var body: some View {
-        HStack(spacing: 14) {
-            NavigationLink {
-                SemesterDetailView(semester: semester)
-            } label: {
-                HStack(spacing: 14) {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 12) {
                     Image(systemName: "graduationcap.fill")
                         .foregroundStyle(.white)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 42, height: 42)
                         .background(Color.blue.gradient)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Semester \(semester.number)")
-                            .font(.headline)
+                        Text("Semester \(semester.semesterNumber)")
+                            .font(.title3)
+                            .fontWeight(.bold)
                         Text("\(semester.subjects.count) subjects")
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -106,31 +133,51 @@ private struct SemesterCardView: View {
                     Spacer()
 
                     Text(String(format: "%.1f", semester.sgpa))
-                        .font(.title3)
-                        .fontWeight(.bold)
+                        .font(.title2)
+                        .fontWeight(.heavy)
                         .foregroundStyle(.blue)
+
+                    Menu {
+                        Button("Edit", systemImage: "pencil") {
+                            onEdit?()
+                        }
+                        Button("Delete", systemImage: "trash", role: .destructive) {
+                            onDelete?()
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .frame(width: 32, height: 32)
+                    }
+                }
+
+                Button(action: onToggle) {
+                    Label(isExpanded ? "Hide Subjects" : "Show Subjects", systemImage: isExpanded ? "chevron.up" : "chevron.down")
+                }
+                .buttonStyle(.bordered)
+
+                if isExpanded {
+                    VStack(spacing: 8) {
+                        ForEach(semester.subjects) { subject in
+                            HStack {
+                                Text(subject.name)
+                                Spacer()
+                                Text(subject.grade)
+                                    .fontWeight(.semibold)
+                            }
+                            .font(.subheadline)
+                            .padding(10)
+                            .background(Color.secondary.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
-            .buttonStyle(.plain)
-
-            Button(action: onEdit) {
-                Image(systemName: "pencil")
-                    .frame(width: 32, height: 32)
-            }
-            .buttonStyle(.borderless)
-
-            Button(role: .destructive, action: onDelete) {
-                Image(systemName: "trash")
-                    .frame(width: 32, height: 32)
-            }
-            .buttonStyle(.borderless)
         }
-        .padding(14)
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 }
 
 #Preview {
     AcademicsView()
+        .modelContainer(for: [Semester.self, Subject.self], inMemory: true)
 }
