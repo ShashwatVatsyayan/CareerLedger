@@ -49,8 +49,7 @@ struct AddAchievementView: View {
                         .frame(minHeight: 100)
                     TextField("Credential ID", text: $credentialID)
                     TextField("Evidence URL", text: $evidenceURL)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
+                        .urlInputStyle()
                     Picker("Verification Status", selection: $verificationStatus) {
                         ForEach(VerificationStatus.allCases) { status in
                             Text(status.displayName).tag(status)
@@ -115,6 +114,7 @@ struct AddAchievementView: View {
             ))
         }
 
+        try? modelContext.save()
         dismiss()
     }
 }

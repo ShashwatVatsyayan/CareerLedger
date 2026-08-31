@@ -41,11 +41,9 @@ struct AddProjectView: View {
 
                 Section("Links") {
                     TextField("GitHub URL", text: $githubURL)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
+                        .urlInputStyle()
                     TextField("Demo URL", text: $demoURL)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
+                        .urlInputStyle()
                     Picker("Verification Status", selection: $verificationStatus) {
                         ForEach(VerificationStatus.allCases) { status in
                             Text(status.displayName).tag(status)
@@ -103,6 +101,7 @@ struct AddProjectView: View {
             ))
         }
 
+        try? modelContext.save()
         dismiss()
     }
 }

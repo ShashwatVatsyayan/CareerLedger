@@ -38,8 +38,7 @@ struct AddCertificateView: View {
 
                 Section("Verification") {
                     TextField("Verification URL", text: $verificationURL)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
+                        .urlInputStyle()
                     Picker("Verification Status", selection: $verificationStatus) {
                         ForEach(VerificationStatus.allCases) { status in
                             Text(status.displayName).tag(status)
@@ -97,6 +96,7 @@ struct AddCertificateView: View {
             ))
         }
 
+        try? modelContext.save()
         dismiss()
     }
 }

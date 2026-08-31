@@ -89,6 +89,7 @@ struct ProjectsView: View {
     private func deleteProject(_ project: Project) {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
             modelContext.delete(project)
+            try? modelContext.save()
         }
     }
 }

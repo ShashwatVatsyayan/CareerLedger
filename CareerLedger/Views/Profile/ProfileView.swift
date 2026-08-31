@@ -5,6 +5,7 @@ import UIKit
 #endif
 
 struct ProfileView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query private var students: [Student]
     @Query(sort: \Semester.semesterNumber) private var semesters: [Semester]
     @Query(sort: \Project.date, order: .reverse) private var projects: [Project]
@@ -43,9 +44,19 @@ struct ProfileView: View {
                 }
                 ToolbarItem {
                     Button("Edit") {
+                        if student == nil {
+                            let newStudent = Student(
+                                name: "Shashwat Vatsyayan",
+                                course: "B.E. Computer Science",
+                                university: "Chandigarh University",
+                                email: "student@example.com",
+                                bio: ""
+                            )
+                            modelContext.insert(newStudent)
+                            try? modelContext.save()
+                        }
                         showingEditProfile = true
                     }
-                    .disabled(student == nil)
                 }
             }
             .sheet(isPresented: $showingEditProfile) {
@@ -422,7 +433,7 @@ private struct ShareCareerLedgerSheet: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(AppBackground())
             .navigationTitle("Share")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationBarTitle()
         }
     }
 }

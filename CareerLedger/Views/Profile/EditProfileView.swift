@@ -1,7 +1,9 @@
+import SwiftData
 import SwiftUI
 
 struct EditProfileView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @State private var name: String
     @State private var university: String
     @State private var course: String
@@ -33,7 +35,7 @@ struct EditProfileView: View {
                     TextField("University", text: $university)
                     TextField("Course", text: $course)
                     TextField("Email", text: $email)
-                        .keyboardType(.emailAddress)
+                        .emailInputStyle()
                 }
 
                 Section("About") {
@@ -43,11 +45,9 @@ struct EditProfileView: View {
 
                 Section("Professional Links") {
                     TextField("GitHub URL", text: $githubURL)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
+                        .urlInputStyle()
                     TextField("LinkedIn URL", text: $linkedinURL)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
+                        .urlInputStyle()
                 }
 
                 Section("Skills") {
@@ -79,6 +79,7 @@ struct EditProfileView: View {
         student.githubURL = githubURL.trimmingCharacters(in: .whitespacesAndNewlines)
         student.linkedinURL = linkedinURL.trimmingCharacters(in: .whitespacesAndNewlines)
         student.skillsText = skillsText.trimmingCharacters(in: .whitespacesAndNewlines)
+        try? modelContext.save()
         dismiss()
     }
 }

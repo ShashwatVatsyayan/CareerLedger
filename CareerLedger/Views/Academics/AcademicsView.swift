@@ -100,6 +100,7 @@ struct AcademicsView: View {
     private func deleteSemester(_ semester: Semester) {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
             modelContext.delete(semester)
+            try? modelContext.save()
         }
     }
 }

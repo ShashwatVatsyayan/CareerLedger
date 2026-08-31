@@ -116,7 +116,7 @@ struct EvidenceRow: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: item.icon)
-                .foregroundStyle(item.url == nil ? .secondary : .green)
+                .foregroundStyle(item.url == nil ? Color.secondary : Color.green)
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.title)
                     .font(.caption)
@@ -232,4 +232,52 @@ func validURL(_ string: String) -> URL? {
     }
 
     return URL(string: "https://\(trimmed)")
+}
+
+extension View {
+    @ViewBuilder
+    func urlInputStyle() -> some View {
+        #if os(iOS)
+        self
+            .keyboardType(.URL)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+        #else
+        self
+            .autocorrectionDisabled()
+        #endif
+    }
+
+    @ViewBuilder
+    func emailInputStyle() -> some View {
+        #if os(iOS)
+        self
+            .keyboardType(.emailAddress)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+        #else
+        self
+            .autocorrectionDisabled()
+        #endif
+    }
+
+    @ViewBuilder
+    func decimalInputStyle() -> some View {
+        #if os(iOS)
+        self
+            .keyboardType(.decimalPad)
+        #else
+        self
+        #endif
+    }
+
+    @ViewBuilder
+    func inlineNavigationBarTitle() -> some View {
+        #if os(iOS)
+        self
+            .navigationBarTitleDisplayMode(.inline)
+        #else
+        self
+        #endif
+    }
 }

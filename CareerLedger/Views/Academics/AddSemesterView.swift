@@ -28,7 +28,7 @@ struct AddSemesterView: View {
                 Section("Semester") {
                     Stepper("Semester: \(semesterNumber)", value: $semesterNumber, in: 1...12)
                     TextField("SGPA", text: $sgpa)
-                        .keyboardType(.decimalPad)
+                        .decimalInputStyle()
                 }
 
                 Section("Add Subject") {
@@ -116,6 +116,7 @@ struct AddSemesterView: View {
             ))
         }
 
+        try? modelContext.save()
         dismiss()
     }
 }

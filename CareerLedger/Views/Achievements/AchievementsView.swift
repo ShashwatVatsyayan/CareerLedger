@@ -89,6 +89,7 @@ struct AchievementsView: View {
     private func deleteAchievement(_ achievement: Achievement) {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
             modelContext.delete(achievement)
+            try? modelContext.save()
         }
     }
 }

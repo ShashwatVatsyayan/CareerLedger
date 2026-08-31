@@ -89,6 +89,7 @@ struct CertificatesView: View {
     private func deleteCertificate(_ certificate: Certificate) {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
             modelContext.delete(certificate)
+            try? modelContext.save()
         }
     }
 }
