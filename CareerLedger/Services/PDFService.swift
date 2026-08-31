@@ -29,118 +29,164 @@ enum PDFService {
                 }
             }
 
-            func drawText(_ text: String, font: UIFont, color: UIColor = .label, x: CGFloat = 44, width: CGFloat = 524) {
+            func drawText(_ text: String, font: UIFont, color: UIColor = .label, x: CGFloat = 44, width: CGFloat = 524, link: URL? = nil) {
                 let paragraph = NSMutableParagraphStyle()
                 paragraph.lineSpacing = 3
-                let attributes: [NSAttributedString.Key: Any] = [
+                var attributes: [NSAttributedString.Key: Any] = [
                     .font: font,
-                    .foregroundColor: color,
+                    .foregroundColor: link != nil ? UIColor.systemBlue : color,
                     .paragraphStyle: paragraph
                 ]
+                if let link {
+                    attributes[.link] = link
+                    attributes[.underlineStyle] = NSUnderlineStyle.single.rawValue
+                }
+
                 let rect = NSString(string: text).boundingRect(
                     with: CGSize(width: width, height: .greatestFiniteMagnitude),
                     options: [.usesLineFragmentOrigin, .usesFontLeading],
                     attributes: attributes,
                     context: nil
                 )
-                NSString(string: text).draw(with: CGRect(x: x, y: y, width: width, height: ceil(rect.height)), options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: attributes, context: nil)
-                y += ceil(rect.height) + 7
+                let textRect = CGRect(x: x, y: y, width: width, height: ceil(rect.height))
+                NSString(string: text).draw(with: textRect, options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: attributes, context: nil)
+                y += ceil(rect.height) + 6
             }
 
             func drawSection(_ title: String) {
                 newPageIfNeeded(70)
                 y += 12
                 UIColor.systemBlue.setFill()
-                UIBezierPath(roundedRect: CGRect(x: 44, y: y, width: 524, height: 30), cornerRadius: 8).fill()
-                drawText(title.uppercased(), font: .systemFont(ofSize: 13, weight: .bold), color: .white, x: 56, width: 500)
+                UIBezierPath(roundedRect: CGRect(x: 44, y: y, width: 524, height: 28), cornerRadius: 6).fill()
+                drawText(title.uppercased(), font: .systemFont(ofSize: 12, weight: .bold), color: .white, x: 54, width: 504)
                 y += 4
             }
 
-            func drawItem(title: String, lines: [String]) {
-                newPageIfNeeded(92)
-                UIColor.secondarySystemBackground.setFill()
-                UIBezierPath(roundedRect: CGRect(x: 44, y: y, width: 524, height: 1), cornerRadius: 0).fill()
-                y += 12
-                drawText(title, font: .systemFont(ofSize: 15, weight: .semibold))
-                for line in lines where !line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    drawText(line, font: .systemFont(ofSize: 11), color: .secondaryLabel)
+            func drawItem(title: String, subtitle: String? = nil, details: [(label: String, value: String, url: URL?)] = []) {
+                newPageIfNeeded(85)
+                UIColor.separator.withAlphaComponent(0.3).setFill()
+                UIBezierPath(rect: CGRect(x: 44, y: y, width: 524, height: 0.8)).fill()
+                y += 10
+                drawText(title, font: .systemFont(ofSize: 14, weight: .bold))
+                if let subtitle, !subtitle.isEmpty {
+                    drawText(subtitle, font: .systemFont(ofSize: 11), color: .secondaryLabel)
                 }
-                y += 3
+                for detail in details where !detail.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    if let url = detail.url {
+                        drawText("\(detail.label): \(detail.value)", font: .systemFont(ofSize: 10, weight: .medium), color: .systemBlue, link: url)
+                    } else {
+                        drawText("\(detail.label): \(detail.value)", font: .systemFont(ofSize: 10), color: .secondaryLabel)
+                    }
+                }
+                y += 2
             }
 
             context.beginPage()
 
-            drawText("CAREER LEDGER", font: .systemFont(ofSize: 28, weight: .heavy), color: .systemBlue)
-            drawText(student?.name ?? "Student", font: .systemFont(ofSize: 22, weight: .bold))
-            drawText("\(student?.course ?? "Student") | \(student?.university ?? "University")", font: .systemFont(ofSize: 13), color: .secondaryLabel)
+            // Header
+            drawText("CAREER LEDGER", font: .systemFont(ofSize: 26, weight: .heavy), color: .systemBlue)
+            drawText(student?.name ?? "Shashwat Vatsyayan", font: .systemFont(ofSize: 20, weight: .bold))
+            drawText("\(student?.course ?? "B.E. Computer Science") • \(student?.university ?? "Chandigarh University")", font: .systemFont(ofSize: 12), color: .secondaryLabel)
 
-            if let qrImage = qrCodeImage(from: student?.portfolioURL ?? "https://careerledger.example.com/demo") {
-                qrImage.draw(in: CGRect(x: 482, y: 42, width: 82, height: 82))
+            if let bio = student?.bio, !bio.isEmpty {
+                drawText("“\(bio)”", font: .italicSystemFont(ofSize: 11), color: .darkGray)
+            }
+
+            // QR Code
+            if let qrImage = qrCodeImage(from: student?.portfolioURL.isEmpty == false ? student!.portfolioURL : "https://careerledger.app/student") {
+                qrImage.draw(in: CGRect(x: 482, y: 42, width: 80, height: 80))
                 let oldY = y
-                y = 128
-                drawText("Scan to view Career Ledger profile", font: .systemFont(ofSize: 8), color: .secondaryLabel, x: 456, width: 112)
+                y = 126
+                drawText("Scan Verified Ledger", font: .systemFont(ofSize: 8, weight: .medium), color: .secondaryLabel, x: 462, width: 110)
                 y = max(oldY, y)
             }
 
-            drawSection("Education")
-            drawItem(title: cgpa > 0 ? "CGPA \(String(format: "%.2f", cgpa))" : "No academic records yet", lines: semesters.sorted { $0.semesterNumber < $1.semesterNumber }.map {
-                "Semester \($0.semesterNumber): SGPA \(String(format: "%.1f", $0.sgpa)) | \($0.subjects.count) subjects"
-            })
+            // Professional Profiles & Contacts
+            drawSection("Verified Profiles & Contact")
+            var contacts: [(label: String, value: String, url: URL?)] = []
+            if let email = student?.email, !email.isEmpty {
+                contacts.append((label: "Email", value: email, url: URL(string: "mailto:\(email)")))
+            }
+            if let github = student?.githubURL, !github.isEmpty {
+                contacts.append((label: "GitHub", value: github, url: validURL(github)))
+            }
+            if let linkedin = student?.linkedinURL, !linkedin.isEmpty {
+                contacts.append((label: "LinkedIn", value: linkedin, url: validURL(linkedin)))
+            }
+            if let portfolio = student?.portfolioURL, !portfolio.isEmpty {
+                contacts.append((label: "Portfolio", value: portfolio, url: validURL(portfolio)))
+            }
+            drawItem(title: "Contact & Online Presence", details: contacts)
 
-            drawSection("Projects")
+            // Education
+            drawSection("Education & Academic Ledger")
+            let eduDetails = semesters.sorted { $0.semesterNumber < $1.semesterNumber }.map {
+                (label: "Semester \($0.semesterNumber)", value: "SGPA \(String(format: "%.1f", $0.sgpa)) • \($0.subjects.count) subjects (\($0.subjects.map { "\($0.name): \($0.grade)" }.joined(separator: ", ")))", url: nil as URL?)
+            }
+            drawItem(title: cgpa > 0 ? "Overall CGPA \(String(format: "%.2f", cgpa))" : "Academic Records", details: eduDetails)
+
+            // Projects
+            drawSection("Projects & Artifacts")
             if projects.isEmpty {
-                drawItem(title: "No projects added", lines: [])
+                drawItem(title: "No projects recorded")
             } else {
                 for project in projects.sorted(by: { $0.date > $1.date }) {
-                    drawItem(title: project.name, lines: [
-                        project.projectDescription,
-                        "Technologies: \(project.technologies)",
-                        "GitHub: \(project.githubURL)",
-                        "Demo: \(project.demoURL)"
-                    ])
+                    var projectDetails: [(label: String, value: String, url: URL?)] = [
+                        (label: "Tech Stack", value: project.technologies, url: nil),
+                        (label: "Verification", value: project.verificationStatus.displayName, url: nil)
+                    ]
+                    if !project.githubURL.isEmpty {
+                        projectDetails.append((label: "Repository", value: project.githubURL, url: validURL(project.githubURL)))
+                    }
+                    if !project.demoURL.isEmpty {
+                        projectDetails.append((label: "Live Demo", value: project.demoURL, url: validURL(project.demoURL)))
+                    }
+                    drawItem(title: project.name, subtitle: project.projectDescription, details: projectDetails)
                 }
             }
 
-            drawSection("Achievements")
+            // Achievements
+            drawSection("Achievements & Honors")
             if achievements.isEmpty {
-                drawItem(title: "No achievements added", lines: [])
+                drawItem(title: "No achievements recorded")
             } else {
                 for achievement in achievements.sorted(by: { $0.date > $1.date }) {
-                    drawItem(title: achievement.title, lines: [
-                        "\(achievement.organization) | \(dateFormatter.string(from: achievement.date))",
-                        achievement.achievementDescription,
-                        "Verification: \(achievement.verificationStatus.displayName)",
-                        "Evidence: \(achievement.evidenceURL)"
-                    ])
+                    var achDetails: [(label: String, value: String, url: URL?)] = [
+                        (label: "Category", value: achievement.category, url: nil),
+                        (label: "Verification", value: achievement.verificationStatus.displayName, url: nil)
+                    ]
+                    if !achievement.credentialID.isEmpty {
+                        achDetails.append((label: "Credential ID", value: achievement.credentialID, url: nil))
+                    }
+                    if !achievement.evidenceURL.isEmpty {
+                        achDetails.append((label: "Evidence Link", value: achievement.evidenceURL, url: validURL(achievement.evidenceURL)))
+                    }
+                    drawItem(title: achievement.title, subtitle: "\(achievement.organization) • \(dateFormatter.string(from: achievement.date))", details: achDetails)
                 }
             }
 
-            drawSection("Certificates")
+            // Certificates
+            drawSection("Certificates & Credentials")
             if certificates.isEmpty {
-                drawItem(title: "No certificates added", lines: [])
+                drawItem(title: "No certificates recorded")
             } else {
                 for certificate in certificates.sorted(by: { $0.issueDate > $1.issueDate }) {
-                    drawItem(title: certificate.title, lines: [
-                        "\(certificate.issuer) | \(dateFormatter.string(from: certificate.issueDate))",
-                        "Credential ID: \(certificate.credentialID)",
-                        "Verification: \(certificate.verificationStatus.displayName)",
-                        "Verification URL: \(certificate.verificationURL)"
-                    ])
+                    var certDetails: [(label: String, value: String, url: URL?)] = [
+                        (label: "Verification Status", value: certificate.verificationStatus.displayName, url: nil)
+                    ]
+                    if !certificate.credentialID.isEmpty {
+                        certDetails.append((label: "Credential ID", value: certificate.credentialID, url: nil))
+                    }
+                    if !certificate.verificationURL.isEmpty {
+                        certDetails.append((label: "Validation URL", value: certificate.verificationURL, url: validURL(certificate.verificationURL)))
+                    }
+                    drawItem(title: certificate.title, subtitle: "Issued by \(certificate.issuer) • \(dateFormatter.string(from: certificate.issueDate))", details: certDetails)
                 }
             }
 
-            drawSection("Skills")
-            drawItem(title: student?.skills.joined(separator: ", ") ?? "No skills added", lines: ["Evidence available through linked projects, certificates, and achievements."])
-
-            drawSection("Professional Links")
-            drawItem(title: "Links", lines: [
-                "GitHub: \(student?.githubURL ?? "")",
-                "LinkedIn: \(student?.linkedinURL ?? "")",
-                "Career Ledger: \(student?.portfolioURL ?? "https://careerledger.example.com/demo")"
-            ])
-
-            drawSection("Career Ledger Verification")
-            drawText("Expo MVP: local PDF generated from current SwiftData records. Online issuer verification is represented by status fields and can be connected to a backend later.", font: .systemFont(ofSize: 11), color: .secondaryLabel)
+            // Skills
+            drawSection("Core Competencies")
+            drawItem(title: (student?.skills ?? []).joined(separator: " • "), subtitle: "Verified technical capabilities backed by SwiftData records.")
         }
 
         return outputURL
@@ -167,6 +213,15 @@ enum PDFService {
         }
 
         return UIImage(cgImage: cgImage)
+    }
+
+    private static func validURL(_ string: String) -> URL? {
+        let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        if trimmed.lowercased().hasPrefix("http://") || trimmed.lowercased().hasPrefix("https://") {
+            return URL(string: trimmed)
+        }
+        return URL(string: "https://\(trimmed)")
     }
 }
 
@@ -229,35 +284,38 @@ enum PDFService {
         func drawSection(_ title: String) {
             y += 12
             NSColor.systemBlue.setFill()
-            NSBezierPath(roundedRect: CGRect(x: 44, y: y, width: 524, height: 30), xRadius: 8, yRadius: 8).fill()
-            drawText(title.uppercased(), font: .boldSystemFont(ofSize: 13), color: .white, x: 56, width: 500)
+            NSBezierPath(roundedRect: CGRect(x: 44, y: y, width: 524, height: 28), xRadius: 6, yRadius: 6).fill()
+            drawText(title.uppercased(), font: .boldSystemFont(ofSize: 12), color: .white, x: 54, width: 504)
             y += 4
         }
 
-        func drawItem(title: String, lines: [String]) {
-            NSColor.secondaryLabelColor.withAlphaComponent(0.2).setFill()
-            NSBezierPath(rect: CGRect(x: 44, y: y, width: 524, height: 1)).fill()
-            y += 12
-            drawText(title, font: .boldSystemFont(ofSize: 15))
-            for line in lines where !line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                drawText(line, font: .systemFont(ofSize: 11), color: .secondaryLabelColor)
+        func drawItem(title: String, subtitle: String? = nil, details: [String] = []) {
+            NSColor.separatorColor.withAlphaComponent(0.3).setFill()
+            NSBezierPath(rect: CGRect(x: 44, y: y, width: 524, height: 0.8)).fill()
+            y += 10
+            drawText(title, font: .boldSystemFont(ofSize: 14))
+            if let subtitle, !subtitle.isEmpty {
+                drawText(subtitle, font: .systemFont(ofSize: 11), color: .secondaryLabelColor)
             }
-            y += 3
+            for detail in details where !detail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                drawText(detail, font: .systemFont(ofSize: 10), color: .secondaryLabelColor)
+            }
+            y += 2
         }
 
-        drawText("CAREER LEDGER", font: .boldSystemFont(ofSize: 28), color: .systemBlue)
-        drawText(student?.name ?? "Student", font: .boldSystemFont(ofSize: 22))
-        drawText("\(student?.course ?? "Student") | \(student?.university ?? "University")", font: .systemFont(ofSize: 13), color: .secondaryLabelColor)
+        drawText("CAREER LEDGER", font: .boldSystemFont(ofSize: 26), color: .systemBlue)
+        drawText(student?.name ?? "Shashwat Vatsyayan", font: .boldSystemFont(ofSize: 20))
+        drawText("\(student?.course ?? "B.E. Computer Science") • \(student?.university ?? "Chandigarh University")", font: .systemFont(ofSize: 12), color: .secondaryLabelColor)
 
         drawSection("Education")
-        drawItem(title: cgpa > 0 ? "CGPA \(String(format: "%.2f", cgpa))" : "No academic records yet", lines: semesters.sorted { $0.semesterNumber < $1.semesterNumber }.map {
-            "Semester \($0.semesterNumber): SGPA \(String(format: "%.1f", $0.sgpa)) | \($0.subjects.count) subjects"
-        })
+        let eduLines = semesters.sorted { $0.semesterNumber < $1.semesterNumber }.map {
+            "Semester \($0.semesterNumber): SGPA \(String(format: "%.1f", $0.sgpa)) (\($0.subjects.count) subjects)"
+        }
+        drawItem(title: cgpa > 0 ? "Overall CGPA \(String(format: "%.2f", cgpa))" : "Academic Records", details: eduLines)
 
         drawSection("Projects")
         for project in projects.sorted(by: { $0.date > $1.date }) {
-            drawItem(title: project.name, lines: [
-                project.projectDescription,
+            drawItem(title: project.name, subtitle: project.projectDescription, details: [
                 "Technologies: \(project.technologies)",
                 "GitHub: \(project.githubURL)",
                 "Demo: \(project.demoURL)"
@@ -266,18 +324,19 @@ enum PDFService {
 
         drawSection("Achievements")
         for achievement in achievements.sorted(by: { $0.date > $1.date }) {
-            drawItem(title: achievement.title, lines: [
-                "\(achievement.organization) | \(achievement.category)",
+            drawItem(title: achievement.title, subtitle: "\(achievement.organization) • \(achievement.category)", details: [
                 achievement.achievementDescription,
-                "Verification: \(achievement.verificationStatus.displayName)"
+                "Verification: \(achievement.verificationStatus.displayName)",
+                "Evidence: \(achievement.evidenceURL)"
             ])
         }
 
         drawSection("Certificates")
         for certificate in certificates.sorted(by: { $0.issueDate > $1.issueDate }) {
-            drawItem(title: certificate.title, lines: [
-                "\(certificate.issuer) | Credential ID: \(certificate.credentialID)",
-                "Verification: \(certificate.verificationStatus.displayName)"
+            drawItem(title: certificate.title, subtitle: "Issued by \(certificate.issuer)", details: [
+                "Credential ID: \(certificate.credentialID)",
+                "Verification: \(certificate.verificationStatus.displayName)",
+                "Validation URL: \(certificate.verificationURL)"
             ])
         }
 

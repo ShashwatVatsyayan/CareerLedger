@@ -11,15 +11,10 @@ struct SettingsView: View {
     @Query private var achievements: [Achievement]
     @Query private var certificates: [Certificate]
 
-    @State private var showingPublicProfile = false
-    @State private var showingShareSheet = false
-    @State private var showingEditProfile = false
     @State private var showingVerificationLegend = false
     @State private var showingResetAlert = false
     @State private var showingRefreshAlert = false
     @State private var refreshMessage = ""
-    @State private var generatedPDFURL: URL?
-    @State private var isGeneratingPDF = false
 
     private var student: Student? {
         students.first
@@ -33,10 +28,8 @@ struct SettingsView: View {
         NavigationStack {
             AdaptivePage {
                 LazyVStack(alignment: .leading, spacing: 20) {
-                    profileOverviewCard
                     appearanceSection
                     dataManagementSection
-                    shareAndExportSection
                     credentialsSection
                     privacyPolicySection
                     termsAndConditionsSection
@@ -45,31 +38,6 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
-            .sheet(isPresented: $showingPublicProfile) {
-                PublicProfileView()
-            }
-            .sheet(isPresented: $showingEditProfile) {
-                if let student {
-                    EditProfileView(student: student)
-                }
-            }
-            .sheet(isPresented: $showingShareSheet) {
-                if let generatedPDFURL {
-                    #if canImport(UIKit)
-                    ShareSheet(activityItems: [generatedPDFURL])
-                    #else
-                    VStack(spacing: 16) {
-                        Text("Career Ledger PDF Generated")
-                            .font(.headline)
-                        ShareLink(item: generatedPDFURL) {
-                            Label("Save / Share PDF", systemImage: "square.and.arrow.up")
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
-                    .padding(30)
-                    #endif
-                }
-            }
             .sheet(isPresented: $showingVerificationLegend) {
                 VerificationLegendSheet()
             }
@@ -85,37 +53,6 @@ struct SettingsView: View {
                 Button("Cancel", role: .cancel) { }
             } message: {
                 Text("This will restore the standard showcase records for semesters, projects, certificates, and achievements.")
-            }
-        }
-    }
-
-    // MARK: - Profile Card
-    private var profileOverviewCard: some View {
-        GlassCard {
-            HStack(spacing: 16) {
-                Image(systemName: "person.crop.circle.fill")
-                    .font(.system(size: 60))
-                    .foregroundStyle(.blue.gradient)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(student?.name ?? "Shashwat Vatsyayan")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    Text(student?.course ?? "B.E. Computer Science")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Text(student?.university ?? "Chandigarh University")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                Button("Edit") {
-                    showingEditProfile = true
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
             }
         }
     }
@@ -173,38 +110,6 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-            }
-        }
-    }
-
-    // MARK: - Public Ledger & PDF
-    private var shareAndExportSection: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 14) {
-                SectionHeader(title: "Public Profile & PDF", subtitle: "Export your verified credentials")
-
-                HStack(spacing: 12) {
-                    Button {
-                        showingPublicProfile = true
-                    } label: {
-                        Label("Public Ledger", systemImage: "person.text.rectangle.fill")
-                            .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-
-                    Button {
-                        generateAndExportPDF()
-                    } label: {
-                        Label(isGeneratingPDF ? "Generating..." : "Export PDF", systemImage: "doc.text.fill")
-                            .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-                    .disabled(isGeneratingPDF)
-                }
             }
         }
     }
@@ -399,24 +304,6 @@ struct SettingsView: View {
 
         refreshMessage = "All records have been reset to default verified showcase items."
         showingRefreshAlert = true
-    }
-
-    private func generateAndExportPDF() {
-        isGeneratingPDF = true
-        do {
-            generatedPDFURL = try PDFService.generateCareerLedgerPDF(
-                student: student,
-                semesters: semesters,
-                projects: projects,
-                achievements: achievements,
-                certificates: certificates
-            )
-            showingShareSheet = true
-        } catch {
-            refreshMessage = "Could not generate PDF: \(error.localizedDescription)"
-            showingRefreshAlert = true
-        }
-        isGeneratingPDF = false
     }
 }
 

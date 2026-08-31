@@ -6,9 +6,27 @@ enum AppSection: String, CaseIterable, Identifiable {
     case academics = "Academics"
     case projects = "Projects"
     case achievements = "Achievements"
+    case profile = "Profile"
     case settings = "Settings"
 
     var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .dashboard:
+            return "Home"
+        case .academics:
+            return "Academics"
+        case .projects:
+            return "Projects"
+        case .achievements:
+            return "Honors"
+        case .profile:
+            return "Profile"
+        case .settings:
+            return "Settings"
+        }
+    }
 
     var icon: String {
         switch self {
@@ -20,6 +38,8 @@ enum AppSection: String, CaseIterable, Identifiable {
             return "folder.fill"
         case .achievements:
             return "trophy.fill"
+        case .profile:
+            return "person.crop.circle.fill"
         case .settings:
             return "gearshape.fill"
         }
@@ -61,17 +81,58 @@ struct MainTabView: View {
         }
         .frame(minWidth: 880, minHeight: 580)
         #else
-        TabView(selection: $selection) {
-            ForEach(AppSection.allCases) { section in
-                selectedView(for: section)
-                    .tabItem {
-                        Label(section.rawValue == "Dashboard" ? "Home" : section.rawValue, systemImage: section.icon)
-                    }
-                    .tag(section)
-            }
+        ZStack(alignment: .bottom) {
+            selectedView
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            customFloatingBar
         }
+        .ignoresSafeArea(.keyboard)
         #endif
     }
+
+    #if !os(macOS)
+    private var customFloatingBar: some View {
+        HStack(spacing: 0) {
+            ForEach(AppSection.allCases) { section in
+                Button {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                        selection = section
+                    }
+                } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: section.icon)
+                            .font(.system(size: selection == section ? 19 : 17, weight: selection == section ? .bold : .regular))
+                            .foregroundStyle(selection == section ? Color.blue : Color.secondary)
+                            .frame(height: 22)
+
+                        Text(section.displayName)
+                            .font(.system(size: 10, weight: selection == section ? .bold : .medium))
+                            .foregroundStyle(selection == section ? Color.blue : Color.secondary)
+                            .lineLimit(1)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .shadow(color: Color.black.opacity(0.14), radius: 14, x: 0, y: 5)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .stroke(Color.white.opacity(0.2), lineWidth: 0.8)
+                )
+        )
+        .padding(.horizontal, 16)
+        .padding(.bottom, 6)
+    }
+    #endif
 
     private func badgeCount(for section: AppSection) -> Int? {
         switch section {
@@ -102,6 +163,8 @@ struct MainTabView: View {
             ProjectsView()
         case .achievements:
             AchievementsView()
+        case .profile:
+            ProfileView()
         case .settings:
             SettingsView()
         }

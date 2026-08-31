@@ -221,6 +221,9 @@ struct AdaptivePage<Content: View>: View {
         ScrollView {
             content
                 .padding(paddingAmount)
+                #if !os(macOS)
+                .padding(.bottom, 68)
+                #endif
                 .frame(maxWidth: maxWidth)
                 .frame(maxWidth: .infinity)
         }
