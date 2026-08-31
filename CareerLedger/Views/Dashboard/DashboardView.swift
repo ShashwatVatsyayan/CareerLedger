@@ -55,7 +55,6 @@ struct DashboardView: View {
 
             VStack(spacing: 18) {
                 statsGrid(columns: 3)
-                ledgerReadinessCard
             }
         }
     }
@@ -65,7 +64,6 @@ struct DashboardView: View {
             header
             statsGrid(columns: 2)
             verificationSummary
-            ledgerReadinessCard
         }
     }
 
@@ -122,33 +120,6 @@ struct DashboardView: View {
                     VerificationCount(label: "Source", value: sourceVerifiedCount, color: .purple)
                     VerificationCount(label: "Evidence", value: evidenceProvidedCount, color: .blue)
                     VerificationCount(label: "Self", value: selfReportedCount, color: .secondary)
-                }
-            }
-        }
-    }
-
-    private var ledgerReadinessCard: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 12) {
-                SectionHeader(title: "Portfolio Summary", subtitle: "Verifiable student credentials")
-
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("\(evidenceRecordCount) Evidence Links")
-                            .font(.headline)
-                        Text("Connected across projects, certifications, and awards")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Button {
-                        showingPublicProfile = true
-                    } label: {
-                        Label("View Ledger", systemImage: "arrow.up.right")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                    }
-                    .buttonStyle(.borderedProminent)
                 }
             }
         }
