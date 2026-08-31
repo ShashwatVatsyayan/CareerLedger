@@ -6,8 +6,7 @@ enum AppSection: String, CaseIterable, Identifiable {
     case academics = "Academics"
     case projects = "Projects"
     case achievements = "Achievements"
-    case profile = "Profile"
-    case more = "More"
+    case settings = "Settings"
 
     var id: String { rawValue }
 
@@ -21,10 +20,8 @@ enum AppSection: String, CaseIterable, Identifiable {
             return "folder.fill"
         case .achievements:
             return "trophy.fill"
-        case .profile:
-            return "person.crop.circle.fill"
-        case .more:
-            return "ellipsis.circle.fill"
+        case .settings:
+            return "gearshape.fill"
         }
     }
 }
@@ -105,10 +102,8 @@ struct MainTabView: View {
             ProjectsView()
         case .achievements:
             AchievementsView()
-        case .profile:
-            ProfileView()
-        case .more:
-            MoreView()
+        case .settings:
+            SettingsView()
         }
     }
 }
