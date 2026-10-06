@@ -292,7 +292,7 @@ struct PublicProfileView: View {
     }
 
     private var verifiedCertificates: Int {
-        certificates.filter { $0.verificationStatus == .issuerVerified || $0.verificationStatus == .sourceVerified }.count
+        certificates.filter { $0.verificationStatus == .issuerVerified || $0.verificationStatus == .automaticallyVerified }.count
     }
 
     private func generateAndSharePDF() {

@@ -1,13 +1,17 @@
 import SwiftData
 import SwiftUI
+import Supabase
+import Auth
+import PostgREST
 
 struct CertificatesView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Certificate.issueDate, order: .reverse) private var certificates: [Certificate]
     @State private var showingAddCertificate = false
     @State private var editingCertificate: Certificate?
+    @State private var viewingDetailsCertificate: Certificate?
     @State private var searchText = ""
-    @State private var selectedStatus: VerificationStatus?
+    @State private var selectedStatus: CertificateVerificationStatus?
 
     private var filteredCertificates: [Certificate] {
         certificates.filter { certificate in
@@ -30,7 +34,7 @@ struct CertificatesView: View {
                     if filteredCertificates.isEmpty {
                         PremiumEmptyState(
                             title: "No Certificates Yet",
-                            message: "Add certificates with issuers, credential IDs, verification URLs, and proof.",
+                            message: "Add certificates with issuers, credential IDs, verification URLs, and evidence proof.",
                             systemImage: "doc.badge.plus",
                             actionTitle: "Add Certificate",
                             action: { showingAddCertificate = true }
@@ -41,7 +45,8 @@ struct CertificatesView: View {
                                 CertificateRecordCard(
                                     certificate: certificate,
                                     onEdit: { editingCertificate = certificate },
-                                    onDelete: { deleteCertificate(certificate) }
+                                    onDelete: { deleteCertificate(certificate) },
+                                    onShowDetails: { viewingDetailsCertificate = certificate }
                                 )
                                 .transition(.move(edge: .bottom).combined(with: .opacity))
                             }
@@ -68,6 +73,9 @@ struct CertificatesView: View {
             .sheet(item: $editingCertificate) { certificate in
                 AddCertificateView(certificate: certificate)
             }
+            .sheet(item: $viewingDetailsCertificate) { certificate in
+                VerificationDetailsSheet(certificate: certificate)
+            }
         }
     }
 
@@ -77,8 +85,8 @@ struct CertificatesView: View {
                 FilterChip(title: "All", isSelected: selectedStatus == nil) {
                     selectedStatus = nil
                 }
-                ForEach(VerificationStatus.allCases) { status in
-                    FilterChip(title: status.displayName, isSelected: selectedStatus == status) {
+                ForEach(CertificateVerificationStatus.allCases) { status in
+                    FilterChip(title: "\(status.colorDot) \(status.displayName)", isSelected: selectedStatus == status) {
                         selectedStatus = status
                     }
                 }
@@ -88,8 +96,22 @@ struct CertificatesView: View {
 
     private func deleteCertificate(_ certificate: Certificate) {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            // Delete locally
             modelContext.delete(certificate)
             try? modelContext.save()
+
+            // Delete remotely if authenticated
+            if let userUUID = SupabaseManager.shared.currentUserUUID {
+                let certID = certificate.id
+                Task {
+                    try? await SupabaseManager.shared.client
+                        .from("certificates")
+                        .delete()
+                        .eq("id", value: certID)
+                        .eq("user_id", value: userUUID)
+                        .execute()
+                }
+            }
         }
     }
 }
@@ -99,6 +121,7 @@ struct CertificateRecordCard: View {
     var isPublic: Bool = false
     var onEdit: (() -> Void)?
     var onDelete: (() -> Void)?
+    var onShowDetails: (() -> Void)?
 
     var body: some View {
         GlassCard {
@@ -107,7 +130,7 @@ struct CertificateRecordCard: View {
                     Image(systemName: "doc.text.fill")
                         .foregroundStyle(.white)
                         .frame(width: 42, height: 42)
-                        .background(Color.green.gradient)
+                        .background(certificate.verificationStatus.tintColor.gradient)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
 
                     VStack(alignment: .leading, spacing: 5) {
@@ -120,13 +143,20 @@ struct CertificateRecordCard: View {
                         Text(certificate.issueDate.formatted(date: .abbreviated, time: .omitted))
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        VerificationBadge(status: certificate.verificationStatus)
+
+                        // Interactive Verification Badge
+                        VerificationBadge(status: certificate.verificationStatus) {
+                            onShowDetails?()
+                        }
                     }
 
                     Spacer()
 
                     if !isPublic {
                         Menu {
+                            Button("Verification Details", systemImage: "info.circle") {
+                                onShowDetails?()
+                            }
                             Button("Edit", systemImage: "pencil") {
                                 onEdit?()
                             }
@@ -145,13 +175,35 @@ struct CertificateRecordCard: View {
                         .font(.caption)
                 }
 
+                if !certificate.evidenceURL.isEmpty {
+                    HStack(spacing: 6) {
+                        Image(systemName: "paperclip")
+                            .font(.caption2)
+                            .foregroundStyle(.blue)
+                        Text("Evidence Document Stored")
+                            .font(.caption2)
+                            .foregroundStyle(.blue)
+                    }
+                }
+
                 EvidenceSection(items: evidenceItems)
 
-                if !isPublic, validURL(certificate.verificationURL) != nil {
-                    Link(destination: validURL(certificate.verificationURL)!) {
-                        Label("Verify Credential", systemImage: "checkmark.shield")
+                HStack(spacing: 10) {
+                    Button {
+                        onShowDetails?()
+                    } label: {
+                        Label("Trust Details", systemImage: "shield.lefthalf.filled")
+                            .font(.caption)
                     }
                     .buttonStyle(.bordered)
+
+                    if !isPublic, validURL(certificate.verificationURL) != nil {
+                        Link(destination: validURL(certificate.verificationURL)!) {
+                            Label("Official Portal", systemImage: "arrow.up.right.square")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
                 }
             }
         }

@@ -3,10 +3,12 @@ import SwiftUI
 
 @main
 struct StudentPortfolioApp: App {
-    @AppStorage("selectedTheme") private var selectedTheme = "system"
+    @AppStorage("selectedTheme") private var selectedTheme = "dark"
     let container: ModelContainer
 
     init() {
+        AppFont.registerFonts()
+        ThemeManager.applyTheme(UserDefaults.standard.string(forKey: "selectedTheme") ?? "dark")
         do {
             let schema = Schema([
                 Student.self,
@@ -28,46 +30,36 @@ struct StudentPortfolioApp: App {
     var body: some Scene {
         WindowGroup {
             AppRootView()
-                .preferredColorScheme(colorScheme)
+                .applyAppTheme()
         }
         .modelContainer(container)
-    }
-
-    private var colorScheme: ColorScheme? {
-        switch selectedTheme {
-        case "light":
-            return .light
-        case "dark":
-            return .dark
-        default:
-            return nil
-        }
     }
 }
 
 private struct AppRootView: View {
-    @AppStorage("isLoggedIn") private var isLoggedIn = true
-    @AppStorage("selectedTheme") private var selectedTheme = "system"
+    @AppStorage("isLoggedIn") private var isLoggedIn = false
+    @AppStorage("selectedTheme") private var selectedTheme = "dark"
 
     var body: some View {
         Group {
             if isLoggedIn {
                 MainTabView()
             } else {
-                LoginView()
+                LoginView(isLoggedIn: $isLoggedIn)
             }
         }
-        .preferredColorScheme(colorScheme)
-    }
-
-    private var colorScheme: ColorScheme? {
-        switch selectedTheme {
-        case "light":
-            return .light
-        case "dark":
-            return .dark
-        default:
-            return nil
+        .onAppear {
+            if CommandLine.arguments.contains("-testDashboard") {
+                isLoggedIn = true
+            } else if SupabaseManager.shared.currentSession == nil {
+                // Ensure no fake session persists without Supabase auth
+                isLoggedIn = false
+            }
+            ThemeManager.applyTheme(selectedTheme)
         }
+        .onChange(of: selectedTheme) { _, newTheme in
+            ThemeManager.applyTheme(newTheme)
+        }
+        .applyAppTheme()
     }
 }

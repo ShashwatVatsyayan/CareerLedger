@@ -11,10 +11,12 @@ struct ProfileView: View {
     @Query(sort: \Project.date, order: .reverse) private var projects: [Project]
     @Query(sort: \Achievement.date, order: .reverse) private var achievements: [Achievement]
     @Query(sort: \Certificate.issueDate, order: .reverse) private var certificates: [Certificate]
+    @AppStorage("selectedTheme") private var selectedTheme = "dark"
 
     @State private var showingEditProfile = false
     @State private var showingPublicProfile = false
     @State private var showingShareSheet = false
+    @State private var showingSettings = false
     @State private var generatedPDFURL: URL?
     @State private var isGeneratingPDF = false
     @State private var copyFeedbackMessage: String?
@@ -53,6 +55,15 @@ struct ProfileView: View {
             .navigationTitle("Profile")
             .inlineNavigationBarTitle()
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showingSettings = true
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .foregroundStyle(Color(red: 0.7, green: 0.72, blue: 0.8))
+                    }
+                }
+
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         showingEditProfile = true
@@ -62,13 +73,19 @@ struct ProfileView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showingSettings) {
+                SettingsView()
+                    .applyAppTheme()
+            }
             .sheet(isPresented: $showingEditProfile) {
                 if let student {
                     EditProfileView(student: student)
+                        .applyAppTheme()
                 }
             }
             .sheet(isPresented: $showingPublicProfile) {
                 PublicProfileView()
+                    .applyAppTheme()
             }
             .sheet(isPresented: $showingShareSheet) {
                 if let generatedPDFURL {

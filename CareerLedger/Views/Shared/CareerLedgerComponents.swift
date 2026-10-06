@@ -2,6 +2,7 @@ import SwiftUI
 
 struct GlassCard<Content: View>: View {
     let content: Content
+    @Environment(\.colorScheme) private var colorScheme
     @State private var isHovered = false
 
     init(@ViewBuilder content: () -> Content) {
@@ -13,29 +14,63 @@ struct GlassCard<Content: View>: View {
             .padding(18)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
-                RoundedRectangle(cornerRadius: 18)
-                    .fill(.regularMaterial)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 18)
-                            .strokeBorder(
+                ZStack {
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(AnyShapeStyle(.regularMaterial))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 18)
+                                .strokeBorder(
+                                    LinearGradient(
+                                        colors: isHovered
+                                            ? [Color.blue.opacity(0.4), Color.purple.opacity(0.2)]
+                                            : [Color.primary.opacity(0.09), Color.primary.opacity(0.03)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1.1
+                                )
+                        }
+                        .opacity(colorScheme == .dark ? 0 : 1)
+
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(
+                            AnyShapeStyle(
                                 LinearGradient(
-                                    colors: isHovered
-                                        ? [Color.blue.opacity(0.4), Color.purple.opacity(0.2)]
-                                        : [Color.primary.opacity(0.09), Color.primary.opacity(0.03)],
+                                    stops: [
+                                        .init(color: Color(red: 0.14, green: 0.14, blue: 0.17).opacity(0.92), location: 0.0),
+                                        .init(color: Color(red: 0.08, green: 0.08, blue: 0.10).opacity(0.95), location: 1.0)
+                                    ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1
+                                )
                             )
-                    }
+                        )
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 18)
+                                .strokeBorder(
+                                    LinearGradient(
+                                        colors: isHovered
+                                            ? [Color.white.opacity(0.45), Color(red: 0.35, green: 0.55, blue: 0.95).opacity(0.4), Color.black.opacity(0.8)]
+                                            : [Color.white.opacity(0.24), Color.white.opacity(0.04), Color.black.opacity(0.7)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1.1
+                                )
+                        }
+                        .opacity(colorScheme == .dark ? 1 : 0)
+                }
             }
             .clipShape(RoundedRectangle(cornerRadius: 18))
             .shadow(
-                color: isHovered ? Color.blue.opacity(0.12) : Color.black.opacity(0.06),
+                color: colorScheme == .dark
+                    ? Color.black.opacity(isHovered ? 0.6 : 0.45)
+                    : (isHovered ? Color.blue.opacity(0.12) : Color.black.opacity(0.06)),
                 radius: isHovered ? 18 : 12,
                 x: 0,
                 y: isHovered ? 8 : 4
             )
+            .animation(.easeInOut(duration: 0.35), value: colorScheme)
             #if os(macOS)
             .scaleEffect(isHovered ? 1.01 : 1.0)
             .onHover { hovering in
@@ -69,50 +104,67 @@ struct SectionHeader: View {
 }
 
 struct VerificationBadge: View {
-    let status: VerificationStatus
+    let title: String
+    let icon: String
+    let tint: Color
+    var onTap: (() -> Void)? = nil
+
+    init(status: CertificateVerificationStatus, onTap: (() -> Void)? = nil) {
+        self.title = status.badgeTitle
+        self.icon = status.iconName
+        self.tint = status.tintColor
+        self.onTap = onTap
+    }
+
+    init(status: VerificationStatus, onTap: (() -> Void)? = nil) {
+        self.title = status.displayName.uppercased()
+        switch status {
+        case .selfReported:
+            self.icon = "circle"
+            self.tint = .secondary
+        case .evidenceProvided:
+            self.icon = "checkmark.circle.fill"
+            self.tint = .blue
+        case .sourceVerified:
+            self.icon = "link.badge.plus"
+            self.tint = .purple
+        case .issuerVerified:
+            self.icon = "checkmark.seal.fill"
+            self.tint = .green
+        }
+        self.onTap = onTap
+    }
 
     var body: some View {
-        Label(status.displayName.uppercased(), systemImage: icon)
-            .font(.system(size: 10, weight: .heavy, design: .rounded))
-            .labelStyle(.titleAndIcon)
+        Button {
+            onTap?()
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .bold))
+                Text(title)
+                    .font(.system(size: 10, weight: .heavy, design: .rounded))
+                if onTap != nil {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 8, weight: .bold))
+                        .opacity(0.6)
+                }
+            }
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .background(tint.opacity(0.12))
             .foregroundStyle(tint)
             .overlay {
                 Capsule()
-                    .strokeBorder(tint.opacity(0.3), lineWidth: 0.8)
+                    .strokeBorder(tint.opacity(0.35), lineWidth: 0.8)
             }
             .clipShape(Capsule())
-            .animation(.spring(response: 0.3, dampingFraction: 0.78), value: status)
-    }
-
-    private var icon: String {
-        switch status {
-        case .selfReported:
-            return "circle"
-        case .evidenceProvided:
-            return "checkmark.circle.fill"
-        case .sourceVerified:
-            return "link.badge.plus"
-        case .issuerVerified:
-            return "checkmark.seal.fill"
         }
-    }
-
-    private var tint: Color {
-        switch status {
-        case .selfReported:
-            return .secondary
-        case .evidenceProvided:
-            return .blue
-        case .sourceVerified:
-            return .purple
-        case .issuerVerified:
-            return .green
-        }
+        .buttonStyle(.plain)
+        .disabled(onTap == nil)
     }
 }
+
 
 struct EvidenceSection: View {
     let items: [EvidenceItem]
@@ -222,7 +274,7 @@ struct AdaptivePage<Content: View>: View {
             content
                 .padding(paddingAmount)
                 #if !os(macOS)
-                .padding(.bottom, 68)
+                .padding(.bottom, 104)
                 #endif
                 .frame(maxWidth: maxWidth)
                 .frame(maxWidth: .infinity)
@@ -243,22 +295,23 @@ struct AppBackground: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        LinearGradient(
-            colors: colorScheme == .dark
-                ? [
-                    Color(red: 0.08, green: 0.09, blue: 0.14),
-                    Color(red: 0.06, green: 0.07, blue: 0.12),
-                    Color(red: 0.04, green: 0.05, blue: 0.09)
-                ]
-                : [
+        ZStack {
+            LinearGradient(
+                colors: [
                     platformBackground,
                     Color.blue.opacity(0.08),
                     Color.purple.opacity(0.05)
                 ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .ignoresSafeArea()
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            .opacity(colorScheme == .dark ? 0 : 1)
+
+            LiquidMetalBackgroundView(showFluidWaves: true)
+                .opacity(colorScheme == .dark ? 1 : 0)
+        }
+        .animation(.easeInOut(duration: 0.35), value: colorScheme)
     }
 
     private var platformBackground: Color {

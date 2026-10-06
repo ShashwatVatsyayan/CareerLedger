@@ -3,8 +3,8 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
-    @AppStorage("selectedTheme") private var selectedTheme = "system"
-    @AppStorage("isLoggedIn") private var isLoggedIn = true
+    @AppStorage("selectedTheme") private var selectedTheme = "dark"
+    @AppStorage("isLoggedIn") private var isLoggedIn = false
     @Query private var students: [Student]
     @Query private var semesters: [Semester]
     @Query private var projects: [Project]
@@ -40,6 +40,7 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .sheet(isPresented: $showingVerificationLegend) {
                 VerificationLegendSheet()
+                    .applyAppTheme()
             }
             .alert("Ledger Refreshed", isPresented: $showingRefreshAlert) {
                 Button("OK", role: .cancel) { }
@@ -55,6 +56,10 @@ struct SettingsView: View {
                 Text("This will restore the standard showcase records for semesters, projects, certificates, and achievements.")
             }
         }
+        .applyAppTheme()
+        .onAppear {
+            ThemeManager.applyTheme(selectedTheme)
+        }
     }
 
     // MARK: - Theme & Appearance
@@ -64,16 +69,21 @@ struct SettingsView: View {
                 SectionHeader(title: "Appearance", subtitle: "Theme & Dark Mode")
 
                 Picker("Theme", selection: $selectedTheme) {
-                    Label("System", systemImage: "circle.lefthalf.filled").tag("system")
+                    Label("Liquid Metal", systemImage: "sparkles").tag("dark")
                     Label("Light", systemImage: "sun.max.fill").tag("light")
-                    Label("Dark", systemImage: "moon.fill").tag("dark")
+                    Label("System", systemImage: "circle.lefthalf.filled").tag("system")
                 }
                 .pickerStyle(.segmented)
+                .onChange(of: selectedTheme) { _, newTheme in
+                    withAnimation(.easeInOut(duration: 0.35)) {
+                        ThemeManager.applyTheme(newTheme)
+                    }
+                }
 
                 HStack {
-                    Image(systemName: selectedTheme == "dark" ? "moon.stars.fill" : (selectedTheme == "light" ? "sun.max.fill" : "circle.lefthalf.filled"))
-                        .foregroundStyle(selectedTheme == "dark" ? .indigo : .orange)
-                    Text(selectedTheme == "dark" ? "Dark Mode Active: Applied deeply across all pages and modals" : (selectedTheme == "light" ? "Light Mode Active" : "Following System Appearance"))
+                    Image(systemName: selectedTheme == "dark" ? "sparkles" : (selectedTheme == "light" ? "sun.max.fill" : "circle.lefthalf.filled"))
+                        .foregroundStyle(selectedTheme == "dark" ? .cyan : .orange)
+                    Text(selectedTheme == "dark" ? "Liquid Metal Theme Active: Chromatic obsidian & molten chrome styling across all views" : (selectedTheme == "light" ? "Light Mode Active" : "Following System Appearance"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -261,7 +271,7 @@ struct SettingsView: View {
                         Text("Signed In As")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text(student?.email ?? "student@example.com")
+                        Text(SupabaseManager.shared.currentUserEmail ?? student?.email ?? "Not logged in")
                             .font(.subheadline)
                             .fontWeight(.medium)
                     }
@@ -269,6 +279,9 @@ struct SettingsView: View {
                 }
 
                 Button(role: .destructive) {
+                    Task {
+                        try? await SupabaseManager.shared.signOut()
+                    }
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
                         isLoggedIn = false
                     }
