@@ -1,3 +1,4 @@
+import Combine
 import SwiftData
 import SwiftUI
 
@@ -25,9 +26,14 @@ struct DashboardView: View {
     var body: some View {
         NavigationStack {
             AdaptivePage {
-                ViewThatFits(in: .horizontal) {
-                    desktopLayout
-                    phoneLayout
+                VStack(spacing: 20) {
+                    ViewThatFits(in: .horizontal) {
+                        desktopLayout
+                        phoneLayout
+                    }
+
+                    // Subtle decorative ambient logo loop near bottom
+                    AmbientBottomLogoTicker()
                 }
             }
             .navigationTitle("Dashboard")
@@ -355,18 +361,166 @@ private struct VerificationCount: View {
     let label: String
     let value: Int
     let color: Color
+    @State private var animatedValue: Double = 0
 
     var body: some View {
         VStack(spacing: 4) {
-            Text("\(value)")
-                .font(.title3)
-                .fontWeight(.heavy)
-                .foregroundStyle(color)
+            AnimatableCountText(
+                currentValue: animatedValue,
+                color: color
+            )
             Text(label)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
+        .onAppear {
+            animatedValue = 0
+            withAnimation(.easeOut(duration: 1.0)) {
+                animatedValue = Double(value)
+            }
+        }
+        .onChange(of: value) { _, newValue in
+            withAnimation(.easeOut(duration: 0.8)) {
+                animatedValue = Double(newValue)
+            }
+        }
+    }
+}
+
+private struct AnimatableCountText: View, Animatable {
+    var currentValue: Double
+    let color: Color
+
+    var animatableData: Double {
+        get { currentValue }
+        set { currentValue = newValue }
+    }
+
+    var body: some View {
+        Text("\(Int(round(currentValue)))")
+            .font(.title3)
+            .fontWeight(.heavy)
+            .foregroundStyle(color)
+    }
+}
+
+// MARK: - Ambient Decorative Rotating Logos (Subtle bottom background element)
+private struct AmbientBottomLogoTicker: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var offset: CGFloat = 0
+    @State private var contentWidth: CGFloat = 0
+    @State private var lastTimestamp: TimeInterval = 0
+
+    private let timer = Timer.publish(every: 1.0 / 60.0, on: .main, in: .common).autoconnect()
+
+    private let techItems: [(name: String, icon: String, color: Color)] = [
+        ("Swift", "swift", Color(red: 0.98, green: 0.40, blue: 0.22)),
+        ("SwiftUI", "square.stack.3d.up.fill", Color(red: 0.35, green: 0.65, blue: 1.0)),
+        ("React", "atom", Color(red: 0.38, green: 0.85, blue: 0.98)),
+        ("Next.js", "triangle.fill", Color(white: 0.8)),
+        ("TypeScript", "t.square.fill", Color(red: 0.20, green: 0.52, blue: 0.95)),
+        ("Tailwind", "wind", Color(red: 0.22, green: 0.75, blue: 0.88)),
+        ("Supabase", "bolt.fill", Color(red: 0.24, green: 0.80, blue: 0.55)),
+        ("Python", "terminal.fill", Color(red: 0.95, green: 0.78, blue: 0.25)),
+        ("GitHub", "chevron.left.forwardslash.chevron.right", Color.secondary),
+        ("Apple Developer", "apple.logo", Color.primary)
+    ]
+
+    var body: some View {
+        GeometryReader { proxy in
+            let viewWidth = proxy.size.width
+            ZStack {
+                HStack(spacing: 32) {
+                    singleLogoTrack
+                        .background(
+                            GeometryReader { inner in
+                                Color.clear
+                                    .preference(key: AmbientTickerWidthKey.self, value: inner.size.width)
+                            }
+                        )
+                    singleLogoTrack
+                    singleLogoTrack
+                }
+                .offset(x: -effectiveOffset)
+
+                // Seamless edge fade-outs so it seamlessly dissolves at boundaries
+                HStack {
+                    LinearGradient(
+                        colors: [
+                            (colorScheme == .dark ? Color.black : Color(white: 0.98)),
+                            Color.clear
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .frame(width: 48)
+
+                    Spacer()
+
+                    LinearGradient(
+                        colors: [
+                            Color.clear,
+                            (colorScheme == .dark ? Color.black : Color(white: 0.98))
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .frame(width: 48)
+                }
+            }
+            .frame(width: viewWidth, height: 26)
+            .clipped()
+            .onPreferenceChange(AmbientTickerWidthKey.self) { newWidth in
+                if newWidth > 0 {
+                    contentWidth = newWidth + 32
+                }
+            }
+            .onReceive(timer) { _ in
+                let now = Date().timeIntervalSinceReferenceDate
+                let delta = lastTimestamp == 0 ? 0.016 : min(now - lastTimestamp, 0.1)
+                lastTimestamp = now
+
+                guard contentWidth > 0 else { return }
+                offset += CGFloat(delta * 32.0)
+                if offset >= contentWidth {
+                    offset -= contentWidth
+                }
+            }
+        }
+        .frame(height: 26)
+        .opacity(colorScheme == .dark ? 0.32 : 0.22)
+        .allowsHitTesting(false)
+        .padding(.vertical, 6)
+    }
+
+    private var effectiveOffset: CGFloat {
+        if contentWidth > 0 {
+            return offset.truncatingRemainder(dividingBy: contentWidth)
+        }
+        return offset
+    }
+
+    private var singleLogoTrack: some View {
+        HStack(spacing: 28) {
+            ForEach(techItems, id: \.name) { item in
+                HStack(spacing: 6) {
+                    Image(systemName: item.icon)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(item.color)
+                    Text(item.name)
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+}
+
+private struct AmbientTickerWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
 

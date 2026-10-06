@@ -16,12 +16,13 @@ final class CareerImportService: @unchecked Sendable {
     ) async throws -> ExtractedCareerData {
         var data = try await SmartResumeExtractor.shared.extract(from: documentURL)
 
-        // Fetch user records from Supabase if online
+        // Fetch user records from Supabase only with a validated active session token
         var remoteProjectTitles: [String: UUID] = [:]
         var remoteCertTitles: [String: UUID] = [:]
         var remoteAchievementTitles: [String: UUID] = [:]
 
-        if let userUUID = SupabaseManager.shared.currentSession?.user.id ?? SupabaseManager.shared.currentUser?.id {
+        if let (_, userUUID) = try? SupabaseManager.shared.validateActiveSession() {
+            // Strictly project only the required fields: "id, title" to minimize payload exposure
             struct TitleRecord: Decodable {
                 let id: UUID
                 let title: String
@@ -110,9 +111,8 @@ final class CareerImportService: @unchecked Sendable {
         data: ExtractedCareerData,
         modelContext: ModelContext
     ) async throws -> ImportSummary {
-        guard let userUUID = SupabaseManager.shared.currentSession?.user.id ?? SupabaseManager.shared.currentUser?.id else {
-            throw ImportError.unauthorizedAccess
-        }
+        // Enforce strict authenticated session token validation
+        let (_, userUUID) = try SupabaseManager.shared.validateActiveSession()
 
         let client = SupabaseManager.shared.client
 
@@ -140,13 +140,13 @@ final class CareerImportService: @unchecked Sendable {
             )
 
             do {
-                try await client
+                _ = try await client
                     .from("profiles")
                     .upsert(profileRow, onConflict: "user_id")
                     .execute()
                 profileUpdated = true
             } catch {
-                try? await client
+                _ = try? await client
                     .from("profiles")
                     .insert(profileRow)
                     .execute()
@@ -175,10 +175,12 @@ final class CareerImportService: @unchecked Sendable {
                 grade: edu.grade.isEmpty ? nil : edu.grade
             )
             do {
-                try await client.from("education").insert(row).execute()
+                _ = try await client.from("education").insert(row).execute()
                 eduCount += 1
             } catch {
+                #if DEBUG
                 print("Notice: Education insert in Supabase: \(error.localizedDescription)")
+                #endif
             }
         }
 
@@ -214,7 +216,7 @@ final class CareerImportService: @unchecked Sendable {
                     github_url: proj.githubURL,
                     demo_url: proj.demoURL
                 )
-                try? await client
+                _ = try? await client
                     .from("projects")
                     .update(updateRow)
                     .eq("id", value: existingId)
@@ -231,7 +233,7 @@ final class CareerImportService: @unchecked Sendable {
                     github_url: proj.githubURL,
                     demo_url: proj.demoURL
                 )
-                try? await client.from("projects").insert(row).execute()
+                _ = try? await client.from("projects").insert(row).execute()
                 projCount += 1
             }
         }
@@ -259,7 +261,7 @@ final class CareerImportService: @unchecked Sendable {
                 description: ach.description,
                 evidence_url: ach.evidenceURL
             )
-            try? await client.from("achievements").insert(row).execute()
+            _ = try? await client.from("achievements").insert(row).execute()
             achCount += 1
         }
 
@@ -286,7 +288,7 @@ final class CareerImportService: @unchecked Sendable {
                 credential_id: cert.credentialID,
                 verification_url: cert.verificationURL
             )
-            try? await client.from("certificates").insert(row).execute()
+            _ = try? await client.from("certificates").insert(row).execute()
             certCount += 1
         }
 
@@ -311,7 +313,7 @@ final class CareerImportService: @unchecked Sendable {
                 role: exp.role,
                 description: exp.description
             )
-            try? await client.from("experience").insert(row).execute()
+            _ = try? await client.from("experience").insert(row).execute()
             expCount += 1
         }
 

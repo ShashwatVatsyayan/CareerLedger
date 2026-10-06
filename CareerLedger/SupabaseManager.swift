@@ -2,6 +2,23 @@ import Foundation
 import Supabase
 import Auth
 
+public enum AuthSecurityError: LocalizedError {
+    case unauthenticatedSession
+    case sessionExpired
+    case unauthorizedAccess(reason: String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .unauthenticatedSession:
+            return "Authentication required: A valid Supabase session token is required to perform this operation."
+        case .sessionExpired:
+            return "Session expired: Security token has expired. Please log in again to renew authorization."
+        case .unauthorizedAccess(let reason):
+            return "Unauthorized: \(reason)"
+        }
+    }
+}
+
 final class SupabaseManager: @unchecked Sendable {
     static let shared = SupabaseManager()
 
@@ -36,6 +53,20 @@ final class SupabaseManager: @unchecked Sendable {
 
     var currentUserUUID: UUID? {
         client.auth.currentSession?.user.id
+    }
+
+    /// Strict security validation helper:
+    /// Audits and confirms that an active, non-expired session token exists.
+    /// Throws AuthSecurityError if unauthenticated or expired.
+    @discardableResult
+    func validateActiveSession() throws -> (session: Session, userUUID: UUID) {
+        guard let session = client.auth.currentSession else {
+            throw AuthSecurityError.unauthenticatedSession
+        }
+        if session.isExpired {
+            throw AuthSecurityError.sessionExpired
+        }
+        return (session, session.user.id)
     }
 
     @discardableResult
@@ -87,6 +118,14 @@ final class SupabaseManager: @unchecked Sendable {
     }
 
     func createProfileRecordIfNeeded(userUUID: UUID, fullName: String) async {
+        // Enforce strict authorization check: caller must match authenticated session UID
+        guard let (_, sessionUID) = try? validateActiveSession(), sessionUID == userUUID else {
+            #if DEBUG
+            print("[Security Audit] Rejected createProfileRecordIfNeeded: Unauthenticated or mismatched session UUID")
+            #endif
+            return
+        }
+
         struct ProfilePayload: Encodable {
             let user_id: UUID
             let full_name: String

@@ -100,11 +100,11 @@ struct CertificatesView: View {
             modelContext.delete(certificate)
             try? modelContext.save()
 
-            // Delete remotely if authenticated
-            if let userUUID = SupabaseManager.shared.currentUserUUID {
+            // Delete remotely only if authenticated with a valid session
+            if let (_, userUUID) = try? SupabaseManager.shared.validateActiveSession() {
                 let certID = certificate.id
                 Task {
-                    try? await SupabaseManager.shared.client
+                    _ = try? await SupabaseManager.shared.client
                         .from("certificates")
                         .delete()
                         .eq("id", value: certID)

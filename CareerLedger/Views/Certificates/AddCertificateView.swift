@@ -488,7 +488,8 @@ struct AddCertificateView: View {
         let trimmedCredentialID = credentialID.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedVerificationURL = verificationURL.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        let userUUID = SupabaseManager.shared.currentUserUUID
+        let authenticatedSession = try? SupabaseManager.shared.validateActiveSession()
+        let userUUID = authenticatedSession?.userUUID
 
         if let cert = certificate {
             // Update existing
@@ -505,7 +506,7 @@ struct AddCertificateView: View {
             cert.verificationDetails = verificationDetails
             cert.updatedAt = Date()
 
-            // Update in Supabase
+            // Update in Supabase only with valid active session
             if let uid = userUUID {
                 let certID = cert.id
                 Task {
@@ -525,7 +526,7 @@ struct AddCertificateView: View {
                         evidence_url: cert.evidenceURL,
                         verification_status: cert.verificationStatus.rawValue
                     )
-                    try? await SupabaseManager.shared.client
+                    _ = try? await SupabaseManager.shared.client
                         .from("certificates")
                         .update(payload)
                         .eq("id", value: certID)
@@ -554,7 +555,7 @@ struct AddCertificateView: View {
             )
             modelContext.insert(newCert)
 
-            // Insert into Supabase
+            // Insert into Supabase only with valid active session
             if let uid = userUUID {
                 Task {
                     struct InsertCertPayload: Encodable {
@@ -579,7 +580,7 @@ struct AddCertificateView: View {
                     )
                     // If verification_status column isn't created in Supabase yet, fallback gracefully
                     do {
-                        try await SupabaseManager.shared.client
+                        _ = try await SupabaseManager.shared.client
                             .from("certificates")
                             .insert(payload)
                             .execute()
@@ -603,7 +604,7 @@ struct AddCertificateView: View {
                             verification_url: trimmedVerificationURL,
                             evidence_url: evidenceURL
                         )
-                        try? await SupabaseManager.shared.client
+                        _ = try? await SupabaseManager.shared.client
                             .from("certificates")
                             .insert(fallback)
                             .execute()

@@ -9,6 +9,21 @@ struct StatCardView: View {
     var tint: Color = .blue
 
     @Environment(\.colorScheme) private var colorScheme
+    @State private var animatedNumericValue: Double = 0
+
+    private var numberGradient: LinearGradient {
+        colorScheme == .dark
+            ? LinearGradient(
+                colors: [Color.white, Color(red: 0.88, green: 0.90, blue: 0.95)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            : LinearGradient(
+                colors: [Color.primary, Color.primary.opacity(0.85)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+    }
 
     var body: some View {
         TiltCard(
@@ -46,28 +61,20 @@ struct StatCardView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(value)
-                        .font(.system(size: 27, weight: .heavy, design: .rounded))
-                        .foregroundStyle(
-                            colorScheme == .dark
-                                ? LinearGradient(
-                                    colors: [
-                                        Color.white,
-                                        Color(red: 0.88, green: 0.90, blue: 0.95)
-                                    ],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                                : LinearGradient(
-                                    colors: [
-                                        Color.primary,
-                                        Color.primary.opacity(0.85)
-                                    ],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
+                    if Double(value) != nil {
+                        let decimals = value.contains(".") ? (value.split(separator: ".").last?.count ?? 2) : 0
+                        CountingStatNumber(
+                            currentValue: animatedNumericValue,
+                            decimalPlaces: decimals,
+                            foregroundGradient: numberGradient,
+                            shadowColor: colorScheme == .dark ? Color.black.opacity(0.6) : Color.clear
                         )
-                        .shadow(color: colorScheme == .dark ? Color.black.opacity(0.6) : Color.clear, radius: 2, x: 0, y: 1)
+                    } else {
+                        Text(value)
+                            .font(.system(size: 27, weight: .heavy, design: .rounded))
+                            .foregroundStyle(numberGradient)
+                            .shadow(color: colorScheme == .dark ? Color.black.opacity(0.6) : Color.clear, radius: 2, x: 0, y: 1)
+                    }
 
                     Text(title)
                         .font(.caption)
@@ -105,6 +112,48 @@ struct StatCardView: View {
             .animation(.easeInOut(duration: 0.35), value: colorScheme)
         }
         .frame(height: 128)
+        .onAppear {
+            if let target = Double(value) {
+                animatedNumericValue = 0
+                withAnimation(.easeOut(duration: 1.0)) {
+                    animatedNumericValue = target
+                }
+            }
+        }
+        .onChange(of: value) { _, newValue in
+            if let target = Double(newValue) {
+                withAnimation(.easeOut(duration: 0.8)) {
+                    animatedNumericValue = target
+                }
+            }
+        }
+    }
+}
+
+private struct CountingStatNumber: View, Animatable {
+    var currentValue: Double
+    let decimalPlaces: Int
+    let foregroundGradient: LinearGradient
+    let shadowColor: Color
+
+    var animatableData: Double {
+        get { currentValue }
+        set { currentValue = newValue }
+    }
+
+    var body: some View {
+        Text(formattedText)
+            .font(.system(size: 27, weight: .heavy, design: .rounded))
+            .foregroundStyle(foregroundGradient)
+            .shadow(color: shadowColor, radius: 2, x: 0, y: 1)
+    }
+
+    private var formattedText: String {
+        if decimalPlaces > 0 {
+            return String(format: "%.\(decimalPlaces)f", currentValue)
+        } else {
+            return "\(Int(round(currentValue)))"
+        }
     }
 }
 

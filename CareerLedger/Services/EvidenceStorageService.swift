@@ -36,10 +36,10 @@ public final class EvidenceStorageService: @unchecked Sendable {
             try? data.write(to: localFileURL, options: .atomic)
         }
 
-        // 3. Attempt to upload to Supabase Storage if authenticated
-        if let session = SupabaseManager.shared.currentSession {
-            let userUUID = session.user.id.uuidString
-            let remotePath = "\(userUUID)/\(storageFilename)"
+        // 3. Attempt to upload to Supabase Storage only if user has a validated active session
+        if let (session, userUUID) = try? SupabaseManager.shared.validateActiveSession() {
+            let userUUIDStr = userUUID.uuidString
+            let remotePath = "\(userUUIDStr)/\(storageFilename)"
             do {
                 _ = try await SupabaseManager.shared.client.storage
                     .from("certificate-evidence")
@@ -48,8 +48,12 @@ public final class EvidenceStorageService: @unchecked Sendable {
                         file: data,
                         options: FileOptions(contentType: mimeType, upsert: true)
                     )
-                // Retrieve public or signed URL
-                if let publicURL = try? SupabaseManager.shared.client.storage
+                // Securely retrieve authorized signed URL (valid 24h) or fallback to public URL
+                if let signedURL = try? await SupabaseManager.shared.client.storage
+                    .from("certificate-evidence")
+                    .createSignedURL(path: remotePath, expiresIn: 86400) {
+                    return signedURL.absoluteString
+                } else if let publicURL = try? SupabaseManager.shared.client.storage
                     .from("certificate-evidence")
                     .getPublicURL(path: remotePath) {
                     return publicURL.absoluteString
@@ -74,9 +78,12 @@ public final class EvidenceStorageService: @unchecked Sendable {
             return try? Data(contentsOf: url)
         }
 
-        // If it's a remote URL, fetch data
+        // If it's a remote URL, fetch data attaching session token for authenticated storage access
         var request = URLRequest(url: url)
         request.timeoutInterval = 10
+        if let session = SupabaseManager.shared.currentSession, !session.isExpired {
+            request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+        }
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               let httpResponse = response as? HTTPURLResponse,
               (200...299).contains(httpResponse.statusCode) else {
