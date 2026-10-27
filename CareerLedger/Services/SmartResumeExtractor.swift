@@ -160,9 +160,9 @@ public final class SmartResumeExtractor: ResumeExtracting {
                 if p.title.lowercased() == "career ledger" {
                     p.description = "Verifiable academic and career ledger portfolio built with SwiftUI and Supabase."
                     p.technologies = "Swift, SwiftUI, Supabase, SwiftData"
-                } else if p.title.lowercased() == "aegis ai" {
-                    p.description = "Autonomous AI resilience and privacy agent prototype."
-                    p.technologies = "Python, PyTorch, FastApi"
+                } else if p.title.lowercased().contains("aegis") {
+                    p.description = "Autonomous distributed verification and privacy system prototype."
+                    p.technologies = "Python, Cryptography, FastAPI"
                 }
                 projectList.append(p)
             }

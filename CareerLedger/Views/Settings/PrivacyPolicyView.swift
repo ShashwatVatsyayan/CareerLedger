@@ -7,7 +7,7 @@ struct PrivacyPolicyView: View {
                 GlassCard {
                     VStack(alignment: .leading, spacing: 10) {
                         Label("Privacy Policy", systemImage: "hand.raised.fill")
-                            .font(.title2)
+                            .font(.largeTitle)
                             .fontWeight(.bold)
                             .foregroundStyle(.blue)
 

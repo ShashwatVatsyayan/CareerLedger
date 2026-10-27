@@ -31,9 +31,6 @@ struct DashboardView: View {
                         desktopLayout
                         phoneLayout
                     }
-
-                    // Subtle decorative ambient logo loop near bottom
-                    AmbientBottomLogoTicker()
                 }
             }
             .navigationTitle("Dashboard")
@@ -177,7 +174,7 @@ struct DashboardView: View {
                             ),
                             lineWidth: 1.6
                         )
-                        .shadow(color: Color(red: 0.35, green: 0.65, blue: 1.0).opacity(0.4), radius: 14, x: 0, y: 0)
+                        .shadow(color: Color.black.opacity(0.12), radius: 6, x: 0, y: 2)
                         .transition(.opacity)
                 }
             }
@@ -226,7 +223,7 @@ struct DashboardView: View {
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .shadow(color: Color.blue.opacity(0.35), radius: 8, x: 0, y: 3)
+                        .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
 
                     VStack(alignment: .leading, spacing: 6) {
                         Text("CAREER LEDGER")
@@ -272,20 +269,11 @@ struct DashboardView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 3) {
-                        HStack(spacing: 6) {
-                            Text("Import Career Data")
-                                .font(.subheadline)
-                                .fontWeight(.bold)
-                                .foregroundStyle(colorScheme == .dark ? Color.white : Color.primary)
-                            Text("SMART")
-                                .font(.system(size: 9, weight: .heavy))
-                                .foregroundStyle(Color(red: 0.35, green: 0.85, blue: 0.55))
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(Color.green.opacity(0.18))
-                                .clipShape(Capsule())
-                        }
-                        Text("Auto-extract resume into profile, projects & credentials")
+                        Text("Import Career Documents")
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .foregroundStyle(colorScheme == .dark ? Color.white : Color.primary)
+                        Text("Add resumes, transcripts, and verified certificates")
                             .font(.caption2)
                             .foregroundStyle(colorScheme == .dark ? Color(red: 0.65, green: 0.68, blue: 0.75) : Color.secondary)
                     }
@@ -405,124 +393,6 @@ private struct AnimatableCountText: View, Animatable {
     }
 }
 
-// MARK: - Ambient Decorative Rotating Logos (Subtle bottom background element)
-private struct AmbientBottomLogoTicker: View {
-    @Environment(\.colorScheme) private var colorScheme
-    @State private var offset: CGFloat = 0
-    @State private var contentWidth: CGFloat = 0
-    @State private var lastTimestamp: TimeInterval = 0
-
-    private let timer = Timer.publish(every: 1.0 / 60.0, on: .main, in: .common).autoconnect()
-
-    private let techItems: [(name: String, icon: String, color: Color)] = [
-        ("Swift", "swift", Color(red: 0.98, green: 0.40, blue: 0.22)),
-        ("SwiftUI", "square.stack.3d.up.fill", Color(red: 0.35, green: 0.65, blue: 1.0)),
-        ("React", "atom", Color(red: 0.38, green: 0.85, blue: 0.98)),
-        ("Next.js", "triangle.fill", Color(white: 0.8)),
-        ("TypeScript", "t.square.fill", Color(red: 0.20, green: 0.52, blue: 0.95)),
-        ("Tailwind", "wind", Color(red: 0.22, green: 0.75, blue: 0.88)),
-        ("Supabase", "bolt.fill", Color(red: 0.24, green: 0.80, blue: 0.55)),
-        ("Python", "terminal.fill", Color(red: 0.95, green: 0.78, blue: 0.25)),
-        ("GitHub", "chevron.left.forwardslash.chevron.right", Color.secondary),
-        ("Apple Developer", "apple.logo", Color.primary)
-    ]
-
-    var body: some View {
-        GeometryReader { proxy in
-            let viewWidth = proxy.size.width
-            ZStack {
-                HStack(spacing: 32) {
-                    singleLogoTrack
-                        .background(
-                            GeometryReader { inner in
-                                Color.clear
-                                    .preference(key: AmbientTickerWidthKey.self, value: inner.size.width)
-                            }
-                        )
-                    singleLogoTrack
-                    singleLogoTrack
-                }
-                .offset(x: -effectiveOffset)
-
-                // Seamless edge fade-outs so it seamlessly dissolves at boundaries
-                HStack {
-                    LinearGradient(
-                        colors: [
-                            (colorScheme == .dark ? Color.black : Color(white: 0.98)),
-                            Color.clear
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                    .frame(width: 48)
-
-                    Spacer()
-
-                    LinearGradient(
-                        colors: [
-                            Color.clear,
-                            (colorScheme == .dark ? Color.black : Color(white: 0.98))
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                    .frame(width: 48)
-                }
-            }
-            .frame(width: viewWidth, height: 26)
-            .clipped()
-            .onPreferenceChange(AmbientTickerWidthKey.self) { newWidth in
-                if newWidth > 0 {
-                    contentWidth = newWidth + 32
-                }
-            }
-            .onReceive(timer) { _ in
-                let now = Date().timeIntervalSinceReferenceDate
-                let delta = lastTimestamp == 0 ? 0.016 : min(now - lastTimestamp, 0.1)
-                lastTimestamp = now
-
-                guard contentWidth > 0 else { return }
-                offset += CGFloat(delta * 32.0)
-                if offset >= contentWidth {
-                    offset -= contentWidth
-                }
-            }
-        }
-        .frame(height: 26)
-        .opacity(colorScheme == .dark ? 0.32 : 0.22)
-        .allowsHitTesting(false)
-        .padding(.vertical, 6)
-    }
-
-    private var effectiveOffset: CGFloat {
-        if contentWidth > 0 {
-            return offset.truncatingRemainder(dividingBy: contentWidth)
-        }
-        return offset
-    }
-
-    private var singleLogoTrack: some View {
-        HStack(spacing: 28) {
-            ForEach(techItems, id: \.name) { item in
-                HStack(spacing: 6) {
-                    Image(systemName: item.icon)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(item.color)
-                    Text(item.name)
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-    }
-}
-
-private struct AmbientTickerWidthKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
-    }
-}
 
 #Preview {
     DashboardView()

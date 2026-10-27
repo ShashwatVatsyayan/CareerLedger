@@ -75,15 +75,15 @@ public enum CertificateVerificationStatus: String, CaseIterable, Codable, Identi
     public var colorDot: String {
         switch self {
         case .notVerified:
-            return "⚪"
+            return ""
         case .evidenceProvided:
-            return "🔵"
+            return ""
         case .automaticallyVerified:
-            return "🟢"
+            return ""
         case .issuerVerified:
-            return "🟣"
+            return ""
         case .disputed:
-            return "🔴"
+            return ""
         }
     }
 

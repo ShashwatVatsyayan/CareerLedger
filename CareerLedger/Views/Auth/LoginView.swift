@@ -146,7 +146,7 @@ struct LoginView: View {
                             endPoint: .bottomTrailing
                         )
                     )
-                    .shadow(color: Color(red: 0.3, green: 0.5, blue: 1.0).opacity(0.6), radius: 6, x: 0, y: 2)
+                    .shadow(color: Color.black.opacity(0.25), radius: 4, x: 0, y: 2)
             }
 
             VStack(spacing: 6) {
@@ -607,8 +607,7 @@ struct LoginView: View {
                     lineWidth: 1.2
                 )
         }
-        .shadow(color: Color.black.opacity(0.6), radius: 25, x: 0, y: 12)
-        .shadow(color: Color(red: 0.2, green: 0.3, blue: 0.6).opacity(0.12), radius: 30, x: 0, y: 0)
+        .shadow(color: Color.black.opacity(0.35), radius: 14, x: 0, y: 6)
     }
 
     // MARK: - Field Styling Helpers

@@ -25,11 +25,11 @@ enum PersistenceController {
                 existing.name = "Shashwat Vatsyayan"
                 existing.course = "B.E. Computer Science"
                 existing.university = "Chandigarh University"
-                existing.bio = "Computer Science student building practical AI, iOS, and web products with a focus on verified career evidence."
+                existing.bio = "Computer Science student building iOS, distributed systems, and web applications with a focus on verified engineering records."
                 existing.githubURL = "https://github.com/ShashwatVatsyayan/CareerLedger"
                 existing.linkedinURL = "https://www.linkedin.com/"
-                existing.portfolioURL = "https://careerledger.example.com/shashwat-vatsyayan"
-                existing.skills = ["SwiftUI", "SwiftData", "Python", "Machine Learning", "Firebase", "Product Design"]
+                existing.portfolioURL = "https://github.com/ShashwatVatsyayan"
+                existing.skills = ["SwiftUI", "SwiftData", "Python", "Systems Engineering", "Firebase", "Product Design"]
             }
         } else {
             let student = Student(
@@ -37,13 +37,13 @@ enum PersistenceController {
                 course: "B.E. Computer Science",
                 university: "Chandigarh University",
                 email: "student@example.com",
-                bio: "Computer Science student building practical AI, iOS, and web products with a focus on verified career evidence.",
+                bio: "Computer Science student building iOS, distributed systems, and web applications with a focus on verified engineering records.",
                 githubURL: "https://github.com/ShashwatVatsyayan/CareerLedger",
                 linkedinURL: "https://www.linkedin.com/",
                 universityURL: "https://www.cuchd.in/",
                 instagramURL: "https://www.instagram.com/",
-                portfolioURL: "https://careerledger.example.com/shashwat-vatsyayan",
-                skills: ["SwiftUI", "SwiftData", "Python", "Machine Learning", "Firebase", "Product Design"]
+                portfolioURL: "https://github.com/ShashwatVatsyayan",
+                skills: ["SwiftUI", "SwiftData", "Python", "Systems Engineering", "Firebase", "Product Design"]
             )
             modelContext.insert(student)
         }
@@ -57,7 +57,7 @@ enum PersistenceController {
                     category: "Technical",
                     description: "Won first place for a student productivity prototype built during a 24-hour campus hackathon.",
                     credentialID: "HACK-2026-001",
-                    evidenceURL: "https://careerledger.example.com/evidence/hackathon",
+                    evidenceURL: "https://github.com/ShashwatVatsyayan/CareerLedger",
                     verificationStatus: .issuerVerified
                 ),
                 Achievement(
@@ -67,7 +67,7 @@ enum PersistenceController {
                     category: "Technical",
                     description: "Ranked in the top finalists in an algorithmic programming contest.",
                     credentialID: "CODE-2025-12850",
-                    evidenceURL: "https://careerledger.example.com/evidence/coding",
+                    evidenceURL: "https://github.com/ShashwatVatsyayan",
                     verificationStatus: .evidenceProvided
                 ),
                 Achievement(
@@ -85,11 +85,11 @@ enum PersistenceController {
         if existingProjects.isEmpty {
             let demoProjects = [
                 Project(
-                    name: "Aegis AI",
-                    description: "AI-assisted media authenticity tool for detecting manipulated or deepfake content.",
-                    technologies: "Python, Machine Learning, Flask",
+                    name: "Aegis Ledger",
+                    description: "Cryptographic media authenticity system for verified digital asset provenance.",
+                    technologies: "Python, Cryptography, FastAPI",
                     githubURL: "https://github.com/ShashwatVatsyayan/CareerLedger",
-                    demoURL: "https://careerledger.example.com/projects/aegis-ai",
+                    demoURL: "https://github.com/ShashwatVatsyayan/CareerLedger",
                     verificationStatus: .evidenceProvided,
                     date: date(year: 2026, month: 3, day: 2)
                 ),
@@ -98,7 +98,7 @@ enum PersistenceController {
                     description: "Campus companion app concept for academic planning, events, and verified student profiles.",
                     technologies: "SwiftUI, SwiftData, CloudKit",
                     githubURL: "https://github.com/ShashwatVatsyayan",
-                    demoURL: "https://careerledger.example.com/projects/universe",
+                    demoURL: "https://github.com/ShashwatVatsyayan",
                     verificationStatus: .sourceVerified,
                     date: date(year: 2026, month: 1, day: 16)
                 )
@@ -113,7 +113,7 @@ enum PersistenceController {
                     issuer: "Example Academy",
                     issueDate: date(year: 2025, month: 10, day: 4),
                     credentialID: "PY-DS-2025-12850",
-                    verificationURL: "https://careerledger.example.com/certificates/python-data-science",
+                    verificationURL: "https://github.com/ShashwatVatsyayan/CareerLedger",
                     verificationStatus: .issuerVerified
                 ),
                 Certificate(
@@ -121,7 +121,7 @@ enum PersistenceController {
                     issuer: "Online Learning Institute",
                     issueDate: date(year: 2026, month: 1, day: 22),
                     credentialID: "MLF-2026-8821",
-                    verificationURL: "https://careerledger.example.com/certificates/ml-fundamentals",
+                    verificationURL: "https://github.com/ShashwatVatsyayan/CareerLedger",
                     verificationStatus: .evidenceProvided
                 )
             ]

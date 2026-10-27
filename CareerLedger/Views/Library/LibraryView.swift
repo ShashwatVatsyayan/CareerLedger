@@ -75,7 +75,7 @@ struct LibraryView: View {
                                                 ? Color(red: 0.25, green: 0.22, blue: 0.40)
                                                 : Color(red: 0.90, green: 0.85, blue: 0.98)
                                         )
-                                        .shadow(color: Color.purple.opacity(0.12), radius: 4, y: 1)
+                                        .shadow(color: Color.black.opacity(0.06), radius: 3, y: 1)
                                 } else {
                                     RoundedRectangle(cornerRadius: 12)
                                         .fill(Color.clear)

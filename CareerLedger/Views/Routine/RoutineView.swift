@@ -37,13 +37,12 @@ struct RoutineView: View {
     // Sheet states
     @State private var showingAddTask = false
     @State private var editingTask: RoutineTask? = nil
-    @State private var showingProClaimSheet = false
     @State private var showingTermsSheet = false
     @State private var showingPrivacySheet = false
 
     // Toast state
     @State private var toastMessage: String? = nil
-    @State private var toastIcon: String = "sparkles"
+    @State private var toastIcon: String = "checkmark.circle.fill"
     @State private var toastTimer: Timer? = nil
 
     private let calendar = Calendar.current
@@ -70,7 +69,7 @@ struct RoutineView: View {
         switch sortOption {
         case .byTime:
             return matching.sorted { t1, t2 in
-                if t1.isAllDay != t2.isAllDay { return t1.isAllDay } // All-day tasks like in screenshot first
+                if t1.isAllDay != t2.isAllDay { return t1.isAllDay }
                 return t1.orderIndex < t2.orderIndex
             }
         case .byCategory:
@@ -92,20 +91,20 @@ struct RoutineView: View {
                 // Main Content
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 18) {
-                        // Top Header (Title + Sort button)
+                        // Top Header (H1 Title + Sort/Legal button)
                         topHeaderBar
 
                         // Horizontal Calendar Day Strip
                         horizontalCalendarStrip
-
-                        // Promo Hero Banner ("Meet a better self with Me+!" / CareerLedger Pro)
-                        promoHeroBanner
 
                         // Category Filter Chips
                         categoryFilterChips
 
                         // Task List
                         taskListView
+
+                        // Legal & Privacy Policy
+                        privacyAndTermsFooter
 
                         // Extra bottom spacing so content scrolls comfortably above tab bar & FAB
                         Spacer(minLength: 90)
@@ -121,34 +120,48 @@ struct RoutineView: View {
                 if let message = toastMessage {
                     toastView(message: message, icon: toastIcon)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
-                        .padding(.bottom, 24)
+                        .padding(.bottom, 98)
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
             .navigationBarHidden(true)
             .sheet(isPresented: $showingAddTask) {
                 AddRoutineTaskSheet(scheduledDate: selectedDate) { newTask in
-                    showToast("✨ Task Added Success!", icon: "sparkles")
+                    showToast("Task added successfully", icon: "checkmark.circle.fill")
                 }
                 .applyAppTheme()
             }
             .sheet(item: $editingTask) { task in
                 EditRoutineTaskSheet(task: task) {
-                    showToast("✨ Task Edited Success!", icon: "sparkles")
+                    showToast("Task updated successfully", icon: "checkmark.circle.fill")
                 }
                 .applyAppTheme()
             }
-            .sheet(isPresented: $showingProClaimSheet) {
-                CareerProClaimSheet()
-                    .applyAppTheme()
-            }
             .sheet(isPresented: $showingTermsSheet) {
-                TermsAndConditionsView()
-                    .applyAppTheme()
+                NavigationStack {
+                    TermsAndConditionsView()
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") {
+                                    showingTermsSheet = false
+                                }
+                            }
+                        }
+                }
+                .applyAppTheme()
             }
             .sheet(isPresented: $showingPrivacySheet) {
-                PrivacyPolicyView()
-                    .applyAppTheme()
+                NavigationStack {
+                    PrivacyPolicyView()
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") {
+                                    showingPrivacySheet = false
+                                }
+                            }
+                        }
+                }
+                .applyAppTheme()
             }
             .onAppear {
                 PersistenceController.seedIfNeeded(modelContext: modelContext)
@@ -163,52 +176,89 @@ struct RoutineView: View {
             : Color(red: 0.97, green: 0.96, blue: 0.99)
     }
 
-    // MARK: - Top Header Bar
+    // MARK: - Top Header Bar (H1 Heading)
     private var topHeaderBar: some View {
-        HStack {
-            Spacer()
-
+        HStack(alignment: .center) {
+            // Explicit H1 Heading
             Text("Today")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundStyle(colorScheme == .dark ? Color.white : Color(red: 0.12, green: 0.12, blue: 0.16))
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .foregroundStyle(colorScheme == .dark ? Color.white : Color(red: 0.10, green: 0.10, blue: 0.14))
 
             Spacer()
 
-            Menu {
-                Picker("Sort Tasks", selection: $sortOption) {
-                    ForEach(RoutineSortOption.allCases) { option in
-                        Label(option.rawValue, systemImage: option.icon).tag(option)
-                    }
-                }
-
-                Divider()
-
+            HStack(spacing: 8) {
+                // Privacy Policy & Terms Quick Menu
                 Menu {
                     Button {
-                        selectedTheme = "light"
-                        ThemeManager.applyTheme("light")
+                        showingPrivacySheet = true
                     } label: {
-                        Label("Light Theme (Screenshot)", systemImage: "sun.max.fill")
+                        Label("Privacy Policy", systemImage: "hand.raised.fill")
                     }
 
                     Button {
-                        selectedTheme = "dark"
-                        ThemeManager.applyTheme("dark")
+                        showingTermsSheet = true
                     } label: {
-                        Label("Dark Theme", systemImage: "moon.fill")
+                        Label("Terms and Conditions", systemImage: "doc.text.fill")
                     }
                 } label: {
-                    Label("Theme (\(selectedTheme.capitalized))", systemImage: selectedTheme == "light" ? "sun.max" : "moon")
+                    Image(systemName: "shield.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(colorScheme == .dark ? Color(red: 0.8, green: 0.8, blue: 0.85) : Color(red: 0.25, green: 0.25, blue: 0.30))
+                        .frame(width: 38, height: 38)
+                        .background(
+                            Circle()
+                                .fill(colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.04))
+                        )
                 }
-            } label: {
-                Image(systemName: "arrow.up.arrow.down")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(colorScheme == .dark ? Color(red: 0.8, green: 0.8, blue: 0.85) : Color(red: 0.2, green: 0.2, blue: 0.25))
-                    .frame(width: 38, height: 38)
-                    .background(
-                        Circle()
-                            .fill(colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.04))
-                    )
+
+                // Sort & Appearance Menu
+                Menu {
+                    Picker("Sort Tasks", selection: $sortOption) {
+                        ForEach(RoutineSortOption.allCases) { option in
+                            Label(option.rawValue, systemImage: option.icon).tag(option)
+                        }
+                    }
+
+                    Divider()
+
+                    Button {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            selectedDate = calendar.startOfDay(for: Date())
+                        }
+                    } label: {
+                        Label("Jump to Today", systemImage: "calendar.badge.clock")
+                    }
+
+                    Divider()
+
+                    Menu {
+                        Button {
+                            selectedTheme = "light"
+                            ThemeManager.applyTheme("light")
+                        } label: {
+                            Label("Light Theme", systemImage: "sun.max.fill")
+                        }
+
+                        Button {
+                            selectedTheme = "dark"
+                            ThemeManager.applyTheme("dark")
+                        } label: {
+                            Label("Dark Theme", systemImage: "moon.fill")
+                        }
+                    } label: {
+                        Label("Theme (\(selectedTheme.capitalized))", systemImage: selectedTheme == "light" ? "sun.max" : "moon")
+                    }
+                } label: {
+                    Image(systemName: "arrow.up.arrow.down")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(colorScheme == .dark ? Color(red: 0.8, green: 0.8, blue: 0.85) : Color(red: 0.25, green: 0.25, blue: 0.30))
+                        .frame(width: 38, height: 38)
+                        .background(
+                            Circle()
+                                .fill(colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.04))
+                        )
+                }
             }
         }
         .padding(.top, 4)
@@ -254,7 +304,7 @@ struct RoutineView: View {
                                     if isSelected {
                                         Circle()
                                             .fill(Color.white)
-                                            .shadow(color: Color.purple.opacity(0.18), radius: 4, y: 2)
+                                            .shadow(color: Color.black.opacity(0.06), radius: 3, y: 1)
                                     }
                                 }
                             )
@@ -290,120 +340,6 @@ struct RoutineView: View {
             }
         }
         .padding(.vertical, 4)
-    }
-
-    // MARK: - Promo Hero Banner Card
-    private var promoHeroBanner: some View {
-        ZStack(alignment: .topTrailing) {
-            // Background Gradient Card
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(red: 0.50, green: 0.25, blue: 0.96),
-                            Color(red: 0.42, green: 0.16, blue: 0.90),
-                            Color(red: 0.35, green: 0.12, blue: 0.84)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .shadow(color: Color(red: 0.45, green: 0.18, blue: 0.92).opacity(0.35), radius: 14, x: 0, y: 7)
-
-            VStack(alignment: .leading, spacing: 14) {
-                // Headline & Sub-offer
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Meet a better\nself with Me+!")
-                            .font(.system(size: 23, weight: .heavy, design: .rounded))
-                            .foregroundStyle(.white)
-                            .lineSpacing(2)
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Only $1.67/month")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                                .foregroundStyle(Color(red: 1.0, green: 0.90, blue: 0.35))
-
-                            Text("Total $19.99/year ($39.99)")
-                                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                .foregroundStyle(Color.white.opacity(0.9))
-                        }
-                        .padding(.top, 4)
-                    }
-
-                    Spacer()
-
-                    // "50% OFF" Tag
-                    VStack(spacing: -2) {
-                        HStack(spacing: 3) {
-                            Image(systemName: "tag.fill")
-                                .font(.system(size: 14))
-                                .rotationEffect(.degrees(-25))
-                                .foregroundStyle(Color(red: 1.0, green: 0.92, blue: 0.25))
-
-                            Text("50%")
-                                .font(.system(size: 28, weight: .heavy, design: .rounded))
-                                .foregroundStyle(Color(red: 1.0, green: 0.92, blue: 0.25))
-                        }
-
-                        Text("OFF")
-                            .font(.system(size: 26, weight: .heavy, design: .rounded))
-                            .foregroundStyle(Color(red: 1.0, green: 0.92, blue: 0.25))
-                            .offset(y: -4)
-                    }
-                    .padding(.top, 4)
-                    .padding(.trailing, 8)
-                }
-
-                // White "Claim Now! ->" Button
-                Button {
-                    #if os(iOS)
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    #endif
-                    showingProClaimSheet = true
-                } label: {
-                    HStack {
-                        Spacer()
-                        Text("Claim Now!")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color(red: 0.12, green: 0.10, blue: 0.20))
-
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundStyle(Color(red: 0.12, green: 0.10, blue: 0.20))
-                        Spacer()
-                    }
-                    .frame(height: 48)
-                    .background(Color.white)
-                    .clipShape(Capsule())
-                    .shadow(color: Color.black.opacity(0.12), radius: 6, y: 3)
-                }
-                .buttonStyle(.plain)
-
-                // Subtext link: "Terms of Service and Privacy Policy"
-                HStack {
-                    Spacer()
-                    HStack(spacing: 4) {
-                        Button("Terms of Service") {
-                            showingTermsSheet = true
-                        }
-                        .underline()
-
-                        Text("and")
-
-                        Button("Privacy Policy") {
-                            showingPrivacySheet = true
-                        }
-                        .underline()
-                    }
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color.white.opacity(0.85))
-                    Spacer()
-                }
-                .padding(.top, -4)
-            }
-            .padding(18)
-        }
     }
 
     // MARK: - Category Filter Chips
@@ -444,11 +380,11 @@ struct RoutineView: View {
                                                     endPoint: .bottom
                                                 )
                                             )
-                                            .shadow(color: Color.purple.opacity(0.15), radius: 4, y: 2)
+                                            .shadow(color: Color.black.opacity(0.04), radius: 3, y: 1)
                                     } else {
                                         Capsule()
                                             .fill(colorScheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.18) : Color.white)
-                                            .shadow(color: Color.black.opacity(0.04), radius: 4, y: 2)
+                                            .shadow(color: Color.black.opacity(0.03), radius: 3, y: 1)
                                             .overlay(
                                                 Capsule()
                                                     .stroke(colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.05), lineWidth: 0.8)
@@ -470,15 +406,18 @@ struct RoutineView: View {
             if filteredTasks.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "checkmark.circle.badge.plus")
-                        .font(.system(size: 40))
-                        .foregroundStyle(Color(red: 0.65, green: 0.55, blue: 0.95))
-                    Text("No tasks for \(selectedCategory == "All" ? "Today" : selectedCategory)")
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .font(.system(size: 38))
+                        .foregroundStyle(Color(red: 0.55, green: 0.45, blue: 0.85))
+
+                    Text("No Tasks for Selected Filter")
+                        .font(.headline)
                         .foregroundStyle(colorScheme == .dark ? Color.white : Color(red: 0.2, green: 0.2, blue: 0.25))
 
-                    Text("Tap the + button to add a new habit or milestone.")
-                        .font(.system(size: 13, design: .rounded))
+                    Text("Use the + button to add routine items, academic goals, or project tasks.")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
 
                     Button {
                         showingAddTask = true
@@ -488,7 +427,7 @@ struct RoutineView: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 18)
                             .padding(.vertical, 8)
-                            .background(Color(red: 0.48, green: 0.25, blue: 0.94))
+                            .background(Color(red: 0.48, green: 0.22, blue: 0.94))
                             .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
@@ -499,6 +438,7 @@ struct RoutineView: View {
                 .background(
                     RoundedRectangle(cornerRadius: 20)
                         .fill(colorScheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.15) : Color.white)
+                        .shadow(color: Color.black.opacity(0.03), radius: 4, y: 1)
                 )
             } else {
                 ForEach(filteredTasks) { task in
@@ -519,6 +459,37 @@ struct RoutineView: View {
         }
     }
 
+    // MARK: - Privacy Policy & Terms and Conditions Footer
+    private var privacyAndTermsFooter: some View {
+        HStack(spacing: 16) {
+            Button {
+                showingPrivacySheet = true
+            } label: {
+                Text("Privacy Policy")
+                    .font(.footnote)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.secondary)
+                    .underline()
+            }
+
+            Text("•")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            Button {
+                showingTermsSheet = true
+            } label: {
+                Text("Terms and Conditions")
+                    .font(.footnote)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.secondary)
+                    .underline()
+            }
+        }
+        .padding(.top, 14)
+        .padding(.bottom, 10)
+    }
+
     // MARK: - Floating Action Button (+)
     private var floatingActionButton: some View {
         Button {
@@ -529,18 +500,9 @@ struct RoutineView: View {
         } label: {
             ZStack {
                 Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 0.48, green: 0.22, blue: 0.94),
-                                Color(red: 0.40, green: 0.15, blue: 0.88)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(Color(red: 0.48, green: 0.22, blue: 0.94))
                     .frame(width: 58, height: 58)
-                    .shadow(color: Color(red: 0.45, green: 0.18, blue: 0.92).opacity(0.40), radius: 10, x: 0, y: 5)
+                    .shadow(color: Color.black.opacity(0.16), radius: 6, x: 0, y: 3)
 
                 Image(systemName: "plus")
                     .font(.system(size: 24, weight: .bold))
@@ -556,21 +518,21 @@ struct RoutineView: View {
     private func toastView(message: String, icon: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: icon)
-                .font(.system(size: 14, weight: .bold))
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Color.white)
 
             Text(message)
-                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white)
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 11)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
         .background(
             Capsule()
-                .fill(Color(red: 0.23, green: 0.23, blue: 0.27).opacity(0.96))
-                .shadow(color: Color.black.opacity(0.25), radius: 10, y: 5)
+                .fill(Color(red: 0.20, green: 0.20, blue: 0.24).opacity(0.96))
+                .shadow(color: Color.black.opacity(0.18), radius: 6, y: 3)
         )
-        .padding(.bottom, 98)
+        .padding(.bottom, 96)
     }
 
     // MARK: - Actions
@@ -583,7 +545,11 @@ struct RoutineView: View {
         }
         try? modelContext.save()
 
-        showToast("Task Edited Success!", icon: "sparkles")
+        if task.isCompleted {
+            showToast("Task completed", icon: "checkmark.circle.fill")
+        } else {
+            showToast("Task marked pending", icon: "arrow.counterclockwise")
+        }
     }
 
     private func deleteTask(_ task: RoutineTask) {
@@ -594,13 +560,13 @@ struct RoutineView: View {
         showToast("Task deleted", icon: "trash.fill")
     }
 
-    private func showToast(_ message: String, icon: String = "sparkles") {
+    private func showToast(_ message: String, icon: String = "checkmark.circle.fill") {
         toastTimer?.invalidate()
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             toastMessage = message
             toastIcon = icon
         }
-        toastTimer = Timer.scheduledTimer(withTimeInterval: 2.4, repeats: false) { _ in
+        toastTimer = Timer.scheduledTimer(withTimeInterval: 2.2, repeats: false) { _ in
             withAnimation(.easeInOut(duration: 0.25)) {
                 toastMessage = nil
             }
@@ -682,7 +648,7 @@ struct RoutineTaskCard: View {
                             task.isCompleted
                                 ? Color(red: 0.48, green: 0.25, blue: 0.94)
                                 : Color(red: 0.70, green: 0.74, blue: 0.82),
-                            lineWidth: 2
+                            lineWidth: 1.6
                         )
                         .frame(width: 28, height: 28)
 
@@ -709,8 +675,8 @@ struct RoutineTaskCard: View {
                         .stroke(cardBorderColor, lineWidth: 1)
                 )
                 .shadow(
-                    color: colorScheme == .dark ? Color.black.opacity(0.3) : Color.blue.opacity(0.03),
-                    radius: 8,
+                    color: colorScheme == .dark ? Color.black.opacity(0.18) : Color.black.opacity(0.04),
+                    radius: 5,
                     x: 0,
                     y: 2
                 )
@@ -796,7 +762,6 @@ struct RoutineTaskCard: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .shadow(color: Color(hex: task.iconTintHex).opacity(0.20), radius: 4, y: 2)
 
             if task.title.lowercased().contains("wash") {
                 Image(systemName: "basket.fill")
@@ -1115,138 +1080,6 @@ struct EditRoutineTaskSheet: View {
         try? modelContext.save()
         onSave()
         dismiss()
-    }
-}
-
-// MARK: - Career Pro Claim Sheet
-struct CareerProClaimSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var hasClaimed = false
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 24) {
-                // Header badge
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color(red: 0.50, green: 0.25, blue: 0.96),
-                                    Color(red: 0.40, green: 0.15, blue: 0.88)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 80, height: 80)
-                        .shadow(color: Color.purple.opacity(0.3), radius: 10, y: 5)
-
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 38, weight: .bold))
-                        .foregroundStyle(Color(red: 1.0, green: 0.92, blue: 0.25))
-                }
-                .padding(.top, 20)
-
-                VStack(spacing: 8) {
-                    Text("Meet a Better Self")
-                        .font(.system(size: 26, weight: .heavy, design: .rounded))
-
-                    Text("Unlock CareerLedger Pro with 50% Off")
-                        .font(.system(size: 15, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
-                }
-
-                // Features list
-                VStack(alignment: .leading, spacing: 14) {
-                    proFeatureRow(icon: "checkmark.seal.fill", title: "Unlimited Verified Credentials", subtitle: "Instant SHA-256 evidence proofing for all certificates")
-                    proFeatureRow(icon: "sparkle.magnifyingglass", title: "Smart Resume AI Extractor", subtitle: "Parse full PDF resumes directly into portfolio models")
-                    proFeatureRow(icon: "globe.americas.fill", title: "Public Portfolio Hosting", subtitle: "Share your ledger profile with recruiters worldwide")
-                    proFeatureRow(icon: "bell.badge.fill", title: "Routine & Milestone Habit Alerts", subtitle: "Never miss daily coding goals or study schedules")
-                }
-                .padding(.horizontal, 20)
-
-                // Pricing Card
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Annual VIP Access")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
-                        Text("Only $1.67/month (Billed at $19.99/year)")
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer()
-
-                    Text("50% OFF")
-                        .font(.system(size: 14, weight: .heavy, design: .rounded))
-                        .foregroundStyle(Color(red: 0.38, green: 0.18, blue: 0.85))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Color(red: 0.90, green: 0.84, blue: 0.98))
-                        .clipShape(Capsule())
-                }
-                .padding(16)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.primary.opacity(0.04))
-                )
-                .padding(.horizontal, 20)
-
-                Spacer()
-
-                Button {
-                    #if os(iOS)
-                    UINotificationFeedbackGenerator().notificationOccurred(.success)
-                    #endif
-                    hasClaimed = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                        dismiss()
-                    }
-                } label: {
-                    HStack {
-                        Spacer()
-                        Text(hasClaimed ? "✓ 50% Discount Claimed!" : "Claim 50% Discount Now")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
-                        Spacer()
-                    }
-                    .frame(height: 52)
-                    .background(
-                        hasClaimed
-                            ? Color.green
-                            : Color(red: 0.48, green: 0.22, blue: 0.94)
-                    )
-                    .clipShape(Capsule())
-                    .shadow(color: Color.purple.opacity(0.3), radius: 8, y: 4)
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
-                }
-            }
-        }
-    }
-
-    private func proFeatureRow(icon: String, title: String, subtitle: String) -> some View {
-        HStack(alignment: .top, spacing: 14) {
-            Image(systemName: icon)
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(Color(red: 0.48, green: 0.22, blue: 0.94))
-                .frame(width: 26, height: 26)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                Text(subtitle)
-                    .font(.system(size: 12, design: .rounded))
-                    .foregroundStyle(.secondary)
-            }
-        }
     }
 }
 

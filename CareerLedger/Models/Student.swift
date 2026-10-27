@@ -41,7 +41,7 @@ final class Student {
         linkedinURL: String = "",
         universityURL: String = "",
         instagramURL: String = "",
-        portfolioURL: String = "https://careerledger.example.com/shashwat-vatsyayan",
+        portfolioURL: String = "",
         skills: [String] = [],
         profileImageData: Data? = nil,
         createdAt: Date = Date()

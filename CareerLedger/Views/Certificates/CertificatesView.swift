@@ -86,7 +86,7 @@ struct CertificatesView: View {
                     selectedStatus = nil
                 }
                 ForEach(CertificateVerificationStatus.allCases) { status in
-                    FilterChip(title: "\(status.colorDot) \(status.displayName)", isSelected: selectedStatus == status) {
+                    FilterChip(title: status.displayName, isSelected: selectedStatus == status) {
                         selectedStatus = status
                     }
                 }

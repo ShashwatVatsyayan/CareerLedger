@@ -100,11 +100,11 @@ public struct TiltCard<Content: View>: View {
             }
             .shadow(
                 color: colorScheme == .dark
-                    ? (isInteracting ? tint.opacity(0.28) : Color.black.opacity(0.4))
-                    : (isInteracting ? tint.opacity(0.20) : Color.black.opacity(0.06)),
-                radius: isInteracting ? 18 : 10,
-                x: CGFloat(-yRot * 0.4),
-                y: CGFloat(xRot * 0.4) + (isInteracting ? 6 : 3)
+                    ? Color.black.opacity(isInteracting ? 0.35 : 0.20)
+                    : Color.black.opacity(isInteracting ? 0.08 : 0.04),
+                radius: isInteracting ? 10 : 6,
+                x: CGFloat(-yRot * 0.2),
+                y: CGFloat(xRot * 0.2) + (isInteracting ? 4 : 2)
             )
             .animation(.easeInOut(duration: 0.35), value: colorScheme)
             .rotation3DEffect(

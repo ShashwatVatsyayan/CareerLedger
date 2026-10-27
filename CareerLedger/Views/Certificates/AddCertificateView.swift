@@ -266,7 +266,7 @@ struct AddCertificateView: View {
             }
             .padding(.vertical, 6)
         } header: {
-            Text("AI / OCR Document Extraction")
+            Text("OCR Document Scanner")
         }
     }
 

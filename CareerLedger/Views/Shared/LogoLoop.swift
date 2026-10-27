@@ -78,7 +78,7 @@ public struct LogoItem: Identifiable, Hashable {
         ),
         LogoItem(
             title: "Python",
-            subtitle: "AI & Scripts",
+            subtitle: "Backend & Scripts",
             systemImage: "terminal.fill",
             tintColor: Color(red: 0.95, green: 0.78, blue: 0.25),
             href: "https://www.python.org"

@@ -60,9 +60,10 @@ struct VerificationDetailsSheet: View {
     private var statusHeaderCard: some View {
         GlassCard {
             VStack(spacing: 12) {
-                HStack(spacing: 10) {
-                    Text(certificate.verificationStatus.colorDot)
-                        .font(.system(size: 28))
+                HStack(spacing: 12) {
+                    Image(systemName: certificate.verificationStatus.iconName)
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(certificate.verificationStatus.tintColor)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(certificate.verificationStatus.displayName)

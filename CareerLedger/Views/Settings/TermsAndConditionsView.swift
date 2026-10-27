@@ -7,7 +7,7 @@ struct TermsAndConditionsView: View {
                 GlassCard {
                     VStack(alignment: .leading, spacing: 10) {
                         Label("Terms & Conditions", systemImage: "doc.plaintext.fill")
-                            .font(.title2)
+                            .font(.largeTitle)
                             .fontWeight(.bold)
                             .foregroundStyle(.purple)
 

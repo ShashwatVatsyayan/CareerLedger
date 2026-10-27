@@ -64,11 +64,11 @@ struct GlassCard<Content: View>: View {
             .clipShape(RoundedRectangle(cornerRadius: 18))
             .shadow(
                 color: colorScheme == .dark
-                    ? Color.black.opacity(isHovered ? 0.6 : 0.45)
-                    : (isHovered ? Color.blue.opacity(0.12) : Color.black.opacity(0.06)),
-                radius: isHovered ? 18 : 12,
+                    ? Color.black.opacity(isHovered ? 0.35 : 0.22)
+                    : Color.black.opacity(isHovered ? 0.08 : 0.04),
+                radius: isHovered ? 8 : 5,
                 x: 0,
-                y: isHovered ? 8 : 4
+                y: isHovered ? 4 : 2
             )
             .animation(.easeInOut(duration: 0.35), value: colorScheme)
             #if os(macOS)
@@ -88,15 +88,14 @@ struct SectionHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(title.uppercased())
-                .font(.caption)
-                .fontWeight(.heavy)
-                .tracking(1.2)
-                .foregroundStyle(.secondary)
+            Text(title)
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .foregroundStyle(.primary)
             if let subtitle {
                 Text(subtitle)
-                    .font(.title3)
-                    .fontWeight(.bold)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

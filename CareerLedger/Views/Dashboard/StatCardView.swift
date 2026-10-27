@@ -51,7 +51,7 @@ struct StatCardView: View {
                             )
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 11))
-                        .shadow(color: tint.opacity(0.45), radius: 8, x: 0, y: 3)
+                        .shadow(color: Color.black.opacity(0.12), radius: 4, x: 0, y: 2)
 
                     Spacer()
 

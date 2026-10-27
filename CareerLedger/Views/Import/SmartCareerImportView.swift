@@ -127,8 +127,8 @@ struct SmartCareerImportView: View {
                     }
 
                     HStack(spacing: 6) {
-                        Image(systemName: "sparkles")
-                        Text("Local On-Device AI Extraction")
+                        Image(systemName: "lock.shield.fill")
+                        Text("Local On-Device Document Parser")
                     }
                     .font(.caption2)
                     .fontWeight(.semibold)
@@ -478,7 +478,7 @@ struct SmartCareerImportView: View {
             // Summary Breakdown
             VStack(spacing: 12) {
                 if summary.profileUpdated {
-                    summaryRow(icon: "person.fill", label: "Profile Updated", value: "✓")
+                    summaryRow(icon: "person.fill", label: "Profile Updated", value: "Updated")
                 }
                 if summary.projectsImported > 0 {
                     summaryRow(icon: "cube.fill", label: "Projects Saved", value: "\(summary.projectsImported)")
@@ -753,7 +753,7 @@ struct SmartCareerImportView: View {
             Name: John Doe
             University: Chandigarh University
             Education: B.E. Computer Science Engineering
-            Projects: Career Ledger, Aegis AI
+            Projects: Career Ledger, Aegis Ledger
             Skills: Swift, SwiftUI, Python
             Experience: Software Developer Intern
             Certificates: Google Cloud Certificate
