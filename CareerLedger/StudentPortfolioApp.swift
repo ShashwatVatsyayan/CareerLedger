@@ -16,8 +16,7 @@ struct StudentPortfolioApp: App {
                 Project.self,
                 Certificate.self,
                 Semester.self,
-                Subject.self,
-                RoutineTask.self
+                Subject.self
             ])
             let config = ModelConfiguration(schema: schema)
             let container = try ModelContainer(for: schema, configurations: [config])
@@ -32,8 +31,7 @@ struct StudentPortfolioApp: App {
                     Project.self,
                     Certificate.self,
                     Semester.self,
-                    Subject.self,
-                    RoutineTask.self
+                    Subject.self
                 ])
                 let inMemoryConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
                 let container = try ModelContainer(for: schema, configurations: [inMemoryConfig])
