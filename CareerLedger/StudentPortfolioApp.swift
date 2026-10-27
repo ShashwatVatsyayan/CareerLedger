@@ -3,12 +3,12 @@ import SwiftUI
 
 @main
 struct StudentPortfolioApp: App {
-    @AppStorage("selectedTheme") private var selectedTheme = "dark"
+    @AppStorage("selectedTheme") private var selectedTheme = "light"
     let container: ModelContainer
 
     init() {
         AppFont.registerFonts()
-        ThemeManager.applyTheme(UserDefaults.standard.string(forKey: "selectedTheme") ?? "dark")
+        ThemeManager.applyTheme(UserDefaults.standard.string(forKey: "selectedTheme") ?? "light")
         do {
             let schema = Schema([
                 Student.self,
@@ -16,14 +16,32 @@ struct StudentPortfolioApp: App {
                 Project.self,
                 Certificate.self,
                 Semester.self,
-                Subject.self
+                Subject.self,
+                RoutineTask.self
             ])
             let config = ModelConfiguration(schema: schema)
             let container = try ModelContainer(for: schema, configurations: [config])
             PersistenceController.seedIfNeeded(modelContext: container.mainContext)
             self.container = container
         } catch {
-            fatalError("Failed to initialize SwiftData ModelContainer: \(error)")
+            print("Notice: Existing store migration fallback triggered: \(error)")
+            do {
+                let schema = Schema([
+                    Student.self,
+                    Achievement.self,
+                    Project.self,
+                    Certificate.self,
+                    Semester.self,
+                    Subject.self,
+                    RoutineTask.self
+                ])
+                let inMemoryConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+                let container = try ModelContainer(for: schema, configurations: [inMemoryConfig])
+                PersistenceController.seedIfNeeded(modelContext: container.mainContext)
+                self.container = container
+            } catch {
+                fatalError("Failed to initialize SwiftData ModelContainer: \(error)")
+            }
         }
     }
 
@@ -38,7 +56,7 @@ struct StudentPortfolioApp: App {
 
 private struct AppRootView: View {
     @AppStorage("isLoggedIn") private var isLoggedIn = false
-    @AppStorage("selectedTheme") private var selectedTheme = "dark"
+    @AppStorage("selectedTheme") private var selectedTheme = "light"
 
     var body: some View {
         Group {

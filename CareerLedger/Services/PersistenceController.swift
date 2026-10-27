@@ -8,7 +8,8 @@ enum PersistenceController {
         Project.self,
         Certificate.self,
         Semester.self,
-        Subject.self
+        Subject.self,
+        RoutineTask.self
     ])
 
     static func seedIfNeeded(modelContext: ModelContext) {
@@ -17,6 +18,7 @@ enum PersistenceController {
         let existingProjects = (try? modelContext.fetch(FetchDescriptor<Project>())) ?? []
         let existingCertificates = (try? modelContext.fetch(FetchDescriptor<Certificate>())) ?? []
         let existingSemesters = (try? modelContext.fetch(FetchDescriptor<Semester>())) ?? []
+        let existingRoutineTasks = (try? modelContext.fetch(FetchDescriptor<RoutineTask>())) ?? []
 
         if let existing = existingStudents.first {
             if existing.name == "Student" || existing.name.isEmpty {
@@ -178,6 +180,92 @@ enum PersistenceController {
                 $0.semester = s4
                 modelContext.insert($0)
             }
+        }
+
+        if existingRoutineTasks.isEmpty {
+            let calendar = Calendar.current
+            let today = calendar.startOfDay(for: Date())
+            let demoRoutines = [
+                RoutineTask(
+                    title: "wash cloths",
+                    category: "Clean Room",
+                    timeString: "Time: All-Day",
+                    isAllDay: true,
+                    scheduledDate: today,
+                    iconName: "basket.fill",
+                    iconBgHex: "#E0F2FE",
+                    iconTintHex: "#0284C7",
+                    isCompleted: false,
+                    notes: "Sort whites and darks, wash towels and athletic wear.",
+                    orderIndex: 0
+                ),
+                RoutineTask(
+                    title: "Organize your kitchen",
+                    category: "Clean Room",
+                    timeString: "Time: All-Day",
+                    isAllDay: true,
+                    scheduledDate: today,
+                    iconName: "fork.knife",
+                    iconBgHex: "#FCE7F3",
+                    iconTintHex: "#DB2777",
+                    isCompleted: false,
+                    notes: "Clean countertops, organize dish racks, and wipe stove.",
+                    orderIndex: 1
+                ),
+                RoutineTask(
+                    title: "Drink water",
+                    category: "Wellness",
+                    timeString: "Time: All-Day",
+                    isAllDay: true,
+                    scheduledDate: today,
+                    iconName: "drop.fill",
+                    iconBgHex: "#E0F2FE",
+                    iconTintHex: "#2563EB",
+                    isCompleted: false,
+                    notes: "Stay hydrated throughout coding sessions. Target 2.5 Liters.",
+                    orderIndex: 2
+                ),
+                RoutineTask(
+                    title: "Study Data Structures & Algorithms",
+                    category: "Academics",
+                    timeString: "Time: 10:00 AM",
+                    isAllDay: false,
+                    scheduledDate: today,
+                    iconName: "book.fill",
+                    iconBgHex: "#FEF3C7",
+                    iconTintHex: "#D97706",
+                    isCompleted: false,
+                    notes: "Review Binary Trees, Graph Traversals, and DP paradigms.",
+                    orderIndex: 3
+                ),
+                RoutineTask(
+                    title: "Push iOS Git Commit & Test",
+                    category: "Projects",
+                    timeString: "Time: 2:30 PM",
+                    isAllDay: false,
+                    scheduledDate: today,
+                    iconName: "laptopcomputer",
+                    iconBgHex: "#EDE9FE",
+                    iconTintHex: "#7C3AED",
+                    isCompleted: false,
+                    notes: "Verify SwiftData reactive updates and commit to GitHub.",
+                    orderIndex: 4
+                ),
+                RoutineTask(
+                    title: "Verify Cloud Certificate Evidence",
+                    category: "Certificates",
+                    timeString: "Time: 5:00 PM",
+                    isAllDay: false,
+                    scheduledDate: today,
+                    iconName: "checkmark.seal.fill",
+                    iconBgHex: "#DCFCE7",
+                    iconTintHex: "#16A34A",
+                    isCompleted: false,
+                    notes: "Run SHA-256 evidence verification for Python & ML credentials.",
+                    orderIndex: 5
+                )
+            ]
+            demoRoutines.forEach(modelContext.insert)
         }
 
         do {

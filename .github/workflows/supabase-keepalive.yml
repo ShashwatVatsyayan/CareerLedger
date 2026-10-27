@@ -1,0 +1,17 @@
+name: Supabase & GitHub Keep-Alive
+
+on:
+  schedule:
+    # Run every 4 days at 06:00 UTC to keep Supabase free-tier project awake & maintain GitHub activity
+    - cron: '0 6 */4 * *'
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        run: |
+          echo "Pinging Supabase endpoint to keep instance active..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "apikey: ${{ secrets.SUPABASE_ANON_KEY || 'sb_publishable_dwP4_8RD4ZOWZld5rFXWQQ_FYikfKx9' }}" "https://vtdvvjljfleudshkcnzi.supabase.co/rest/v1/" || true)
+          echo "Supabase response status: $STATUS"

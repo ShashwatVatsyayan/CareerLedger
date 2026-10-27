@@ -2,39 +2,23 @@ import SwiftData
 import SwiftUI
 
 enum AppSection: String, CaseIterable, Identifiable {
-    case dashboard = "Dashboard"
-    case academics = "Academics"
-    case projects = "Projects"
-    case achievements = "Achievements"
+    case routine = "Routine"
+    case discover = "Discover"
+    case library = "Library"
     case profile = "Profile"
 
     var id: String { rawValue }
 
-    var displayName: String {
-        switch self {
-        case .dashboard:
-            return "Home"
-        case .academics:
-            return "Academics"
-        case .projects:
-            return "Projects"
-        case .achievements:
-            return "Honors"
-        case .profile:
-            return "Profile"
-        }
-    }
+    var displayName: String { rawValue }
 
     var icon: String {
         switch self {
-        case .dashboard:
-            return "house.fill"
-        case .academics:
-            return "graduationcap.fill"
-        case .projects:
-            return "folder.fill"
-        case .achievements:
-            return "trophy.fill"
+        case .routine:
+            return "checkmark.seal.fill"
+        case .discover:
+            return "square.grid.2x2.fill"
+        case .library:
+            return "books.vertical.fill"
         case .profile:
             return "person.crop.circle.fill"
         }
@@ -43,12 +27,12 @@ enum AppSection: String, CaseIterable, Identifiable {
 
 struct MainTabView: View {
     @Environment(\.colorScheme) private var colorScheme
-    @State private var selection: AppSection = .dashboard
+    @State private var selection: AppSection = .routine
     @Namespace private var tabAnimationNamespace
-    @Query private var semesters: [Semester]
-    @Query private var projects: [Project]
-    @Query private var achievements: [Achievement]
+
+    @Query private var tasks: [RoutineTask]
     @Query private var certificates: [Certificate]
+    @Query private var projects: [Project]
 
     var body: some View {
         #if os(macOS)
@@ -63,8 +47,8 @@ struct MainTabView: View {
                             .fontWeight(.bold)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.blue.opacity(0.14))
-                            .foregroundStyle(.blue)
+                            .background(Color.purple.opacity(0.14))
+                            .foregroundStyle(.purple)
                             .clipShape(Capsule())
                     }
                 }
@@ -74,55 +58,17 @@ struct MainTabView: View {
             .listStyle(.sidebar)
         } detail: {
             selectedView
-                .frame(minWidth: 550)
+                .frame(minWidth: 600)
         }
-        .frame(minWidth: 880, minHeight: 580)
+        .frame(minWidth: 920, minHeight: 600)
         #else
         ZStack(alignment: .bottom) {
+            // Selected Screen Content
             selectedView
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            // Frosted ambient blur dock covering the bottom area & safe area below the tab bar
-            VStack(spacing: 0) {
-                Spacer()
-                Rectangle()
-                    .fill(.ultraThinMaterial)
-                    .overlay {
-                        LinearGradient(
-                            stops: colorScheme == .dark
-                                ? [
-                                    .init(color: Color.clear, location: 0.0),
-                                    .init(color: Color(red: 0.06, green: 0.06, blue: 0.09).opacity(0.70), location: 0.28),
-                                    .init(color: Color(red: 0.03, green: 0.03, blue: 0.05).opacity(0.95), location: 0.72),
-                                    .init(color: Color(red: 0.02, green: 0.02, blue: 0.03), location: 1.0)
-                                ]
-                                : [
-                                    .init(color: Color.clear, location: 0.0),
-                                    .init(color: Color.white.opacity(0.55), location: 0.28),
-                                    .init(color: Color.white.opacity(0.90), location: 0.72),
-                                    .init(color: Color.white, location: 1.0)
-                                ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    }
-                    .mask {
-                        LinearGradient(
-                            stops: [
-                                .init(color: .clear, location: 0.0),
-                                .init(color: .black.opacity(0.85), location: 0.35),
-                                .init(color: .black, location: 0.6)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    }
-                    .frame(height: 130)
-                    .allowsHitTesting(false)
-            }
-            .ignoresSafeArea(edges: .bottom)
-
-            customFloatingBar
+            // Modern Bottom Tab Bar matching screenshot
+            customBottomTabBar
         }
         .ignoresSafeArea(.keyboard)
         .applyAppTheme()
@@ -130,231 +76,85 @@ struct MainTabView: View {
     }
 
     #if !os(macOS)
-    private var customFloatingBar: some View {
-        HStack(spacing: 4) {
-            ForEach(AppSection.allCases) { section in
-                let isSelected = selection == section
+    private var customBottomTabBar: some View {
+        VStack(spacing: 0) {
+            // Center Dot Indicator matching screenshot
+            Circle()
+                .fill(colorScheme == .dark ? Color.white.opacity(0.35) : Color(red: 0.55, green: 0.55, blue: 0.58))
+                .frame(width: 14, height: 14)
+                .padding(.bottom, 6)
 
-                Button {
-                    #if os(iOS)
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    #endif
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
-                        selection = section
-                    }
-                } label: {
-                    VStack(spacing: 3) {
-                        ZStack(alignment: .topTrailing) {
+            // Tab Buttons
+            HStack(spacing: 0) {
+                ForEach(AppSection.allCases) { section in
+                    let isSelected = selection == section
+
+                    Button {
+                        #if os(iOS)
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        #endif
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.76)) {
+                            selection = section
+                        }
+                    } label: {
+                        VStack(spacing: 4) {
                             Image(systemName: section.icon)
-                                .font(.system(size: isSelected ? 19 : 17, weight: isSelected ? .bold : .regular))
+                                .font(.system(size: 22, weight: isSelected ? .bold : .regular))
                                 .foregroundStyle(
                                     isSelected
-                                        ? (colorScheme == .dark
-                                            ? LinearGradient(
-                                                colors: [
-                                                    Color.white,
-                                                    Color(red: 0.65, green: 0.82, blue: 1.0)
-                                                ],
-                                                startPoint: .top,
-                                                endPoint: .bottom
-                                            )
-                                            : LinearGradient(
-                                                colors: [
-                                                    Color.blue,
-                                                    Color(red: 0.15, green: 0.35, blue: 0.85)
-                                                ],
-                                                startPoint: .top,
-                                                endPoint: .bottom
-                                            ))
-                                        : (colorScheme == .dark
-                                            ? LinearGradient(
-                                                colors: [
-                                                    Color(red: 0.58, green: 0.60, blue: 0.66),
-                                                    Color(red: 0.42, green: 0.44, blue: 0.50)
-                                                ],
-                                                startPoint: .top,
-                                                endPoint: .bottom
-                                            )
-                                            : LinearGradient(
-                                                colors: [
-                                                    Color(red: 0.45, green: 0.47, blue: 0.53),
-                                                    Color(red: 0.38, green: 0.40, blue: 0.45)
-                                                ],
-                                                startPoint: .top,
-                                                endPoint: .bottom
-                                            ))
+                                        ? (colorScheme == .dark ? Color.white : Color(red: 0.10, green: 0.10, blue: 0.14))
+                                        : (colorScheme == .dark ? Color.gray.opacity(0.6) : Color(red: 0.70, green: 0.72, blue: 0.76))
                                 )
-                                .frame(height: 22)
-                                .shadow(
-                                    color: isSelected
-                                        ? (colorScheme == .dark
-                                            ? Color(red: 0.3, green: 0.55, blue: 1.0).opacity(0.6)
-                                            : Color.blue.opacity(0.35))
-                                        : Color.clear,
-                                    radius: 6,
-                                    y: 1
-                                )
+                                .scaleEffect(isSelected ? 1.05 : 1.0)
+                                .frame(height: 24)
 
-                            if let badge = badgeCount(for: section) {
-                                Text("\(badge)")
-                                    .font(.system(size: 9, weight: .bold))
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 4)
-                                    .padding(.vertical, 1)
-                                    .background(Color.blue)
-                                    .clipShape(Capsule())
-                                    .offset(x: 10, y: -4)
-                            }
+                            Text(section.displayName)
+                                .font(.system(size: 11, weight: isSelected ? .bold : .medium, design: .rounded))
+                                .foregroundStyle(
+                                    isSelected
+                                        ? (colorScheme == .dark ? Color.white : Color(red: 0.10, green: 0.10, blue: 0.14))
+                                        : (colorScheme == .dark ? Color.gray.opacity(0.6) : Color(red: 0.70, green: 0.72, blue: 0.76))
+                                )
+                                .lineLimit(1)
                         }
-
-                        Text(section.displayName)
-                            .font(.system(size: 10, weight: isSelected ? .bold : .medium, design: .rounded))
-                            .foregroundStyle(
-                                isSelected
-                                    ? (colorScheme == .dark ? Color.white : Color.blue)
-                                    : (colorScheme == .dark ? Color(red: 0.58, green: 0.60, blue: 0.66) : Color(red: 0.45, green: 0.47, blue: 0.53))
-                            )
-                            .lineLimit(1)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                        .contentShape(Rectangle())
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 7)
-                    .background(
-                        Group {
-                            if isSelected {
-                                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                    .fill(
-                                        colorScheme == .dark
-                                            ? LinearGradient(
-                                                colors: [
-                                                    Color(red: 0.22, green: 0.42, blue: 0.95).opacity(0.32),
-                                                    Color(red: 0.12, green: 0.22, blue: 0.55).opacity(0.18)
-                                                ],
-                                                startPoint: .top,
-                                                endPoint: .bottom
-                                            )
-                                            : LinearGradient(
-                                                colors: [
-                                                    Color.blue.opacity(0.18),
-                                                    Color.blue.opacity(0.08)
-                                                ],
-                                                startPoint: .top,
-                                                endPoint: .bottom
-                                            )
-                                    )
-                                    .overlay {
-                                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                            .strokeBorder(
-                                                colorScheme == .dark
-                                                    ? LinearGradient(
-                                                        colors: [
-                                                            Color(red: 0.45, green: 0.70, blue: 1.0).opacity(0.45),
-                                                            Color.clear
-                                                        ],
-                                                        startPoint: .top,
-                                                        endPoint: .bottom
-                                                    )
-                                                    : LinearGradient(
-                                                        colors: [
-                                                            Color.blue.opacity(0.40),
-                                                            Color.blue.opacity(0.05)
-                                                        ],
-                                                        startPoint: .top,
-                                                        endPoint: .bottom
-                                                    ),
-                                                lineWidth: 0.8
-                                            )
-                                    }
-                                    .matchedGeometryEffect(id: "activeTabPill", in: tabAnimationNamespace)
-                            }
-                        }
-                    )
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 5)
+        .padding(.top, 6)
+        .padding(.bottom, 12)
         .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(
-                    colorScheme == .dark
-                        ? AnyShapeStyle(
-                            LinearGradient(
-                                stops: [
-                                    .init(color: Color(red: 0.16, green: 0.16, blue: 0.19).opacity(0.97), location: 0.0),
-                                    .init(color: Color(red: 0.09, green: 0.09, blue: 0.11).opacity(0.98), location: 0.5),
-                                    .init(color: Color(red: 0.05, green: 0.05, blue: 0.07), location: 1.0)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        : AnyShapeStyle(
-                            LinearGradient(
-                                stops: [
-                                    .init(color: Color.white.opacity(0.96), location: 0.0),
-                                    .init(color: Color(red: 0.95, green: 0.96, blue: 0.98).opacity(0.97), location: 1.0)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                )
-                .shadow(
-                    color: colorScheme == .dark
-                        ? Color.black.opacity(0.65)
-                        : Color.black.opacity(0.10),
-                    radius: colorScheme == .dark ? 20 : 15,
-                    x: 0,
-                    y: colorScheme == .dark ? 10 : 6
-                )
-                .shadow(
-                    color: colorScheme == .dark
-                        ? Color(red: 0.25, green: 0.45, blue: 0.95).opacity(0.14)
-                        : Color.blue.opacity(0.08),
-                    radius: 25,
-                    x: 0,
-                    y: 0
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(
-                            LinearGradient(
-                                colors: colorScheme == .dark
-                                    ? [
-                                        Color.white.opacity(0.35),
-                                        Color.white.opacity(0.08),
-                                        Color(red: 0.4, green: 0.6, blue: 1.0).opacity(0.25),
-                                        Color.black.opacity(0.8)
-                                    ]
-                                    : [
-                                        Color.white,
-                                        Color.white.opacity(0.6),
-                                        Color(red: 0.8, green: 0.85, blue: 0.92),
-                                        Color.black.opacity(0.08)
-                                    ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1.2
-                        )
-                )
+            colorScheme == .dark
+                ? Color(red: 0.10, green: 0.10, blue: 0.12).opacity(0.98)
+                : Color.white.opacity(0.98)
         )
-        .animation(.easeInOut(duration: 0.35), value: colorScheme)
-        .padding(.horizontal, 18)
-        .padding(.bottom, 8)
+        .overlay(
+            Rectangle()
+                .fill(colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.06))
+                .frame(height: 0.8),
+            alignment: .top
+        )
+        .shadow(
+            color: colorScheme == .dark ? Color.black.opacity(0.4) : Color.black.opacity(0.05),
+            radius: 10,
+            x: 0,
+            y: -2
+        )
     }
     #endif
 
     private func badgeCount(for section: AppSection) -> Int? {
         switch section {
-        case .academics:
-            return semesters.isEmpty ? nil : semesters.count
-        case .projects:
-            return projects.isEmpty ? nil : projects.count
-        case .achievements:
-            return achievements.isEmpty ? nil : achievements.count
+        case .routine:
+            let pending = tasks.filter { !$0.isCompleted }.count
+            return pending > 0 ? pending : nil
+        case .library:
+            let total = certificates.count + projects.count
+            return total > 0 ? total : nil
         default:
             return nil
         }
@@ -368,14 +168,12 @@ struct MainTabView: View {
     @ViewBuilder
     private func selectedView(for section: AppSection) -> some View {
         switch section {
-        case .dashboard:
+        case .routine:
+            RoutineView()
+        case .discover:
             DashboardView()
-        case .academics:
-            AcademicsView()
-        case .projects:
-            ProjectsView()
-        case .achievements:
-            AchievementsView()
+        case .library:
+            LibraryView()
         case .profile:
             ProfileView()
         }
@@ -384,5 +182,16 @@ struct MainTabView: View {
 
 #Preview {
     MainTabView()
-        .modelContainer(for: [Student.self, Semester.self, Subject.self, Project.self, Achievement.self, Certificate.self], inMemory: true)
+        .modelContainer(
+            for: [
+                Student.self,
+                Semester.self,
+                Subject.self,
+                Project.self,
+                Achievement.self,
+                Certificate.self,
+                RoutineTask.self
+            ],
+            inMemory: true
+        )
 }
